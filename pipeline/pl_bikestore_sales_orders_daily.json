@@ -17,7 +17,7 @@
 				"typeProperties": {
 					"source": {
 						"type": "SqlServerSource",
-						"sqlReaderQuery": "SELECT \n\torder_id\n\t,customer_id\n\t,order_status\n\t,order_date\n\t,required_date\n\t,shipped_date\n\t,store_id\n\t,staff_id\nFROM \n\tsales.orders\nWHERE \n\torder_date >= CAST(CAST(GETDATE() AS DATE) AS DATETIME) \nAND order_date < CAST(CAST(DATEADD(DAY, 1, GETDATE()) AS DATE) AS DATETIME)",
+						"sqlReaderQuery": "SELECT \n\torder_id\n\t,customer_id\n\t,order_status\n\t,order_date\n\t,required_date\n\t,shipped_date\n\t,store_id\n\t,staff_id\nFROM \n\tsales.orders\nWHERE \n\t(order_date >= CAST(CAST(GETDATE() AS DATE) AS DATETIME) \nAND order_date < CAST(CAST(DATEADD(DAY, 1, GETDATE()) AS DATE) AS DATETIME))\nOR\n(\n\tshipped_date = CAST(GETDATE() AS DATE)\n)",
 						"queryTimeout": "00:30:00",
 						"isolationLevel": "ReadCommitted",
 						"partitionOption": "None"
