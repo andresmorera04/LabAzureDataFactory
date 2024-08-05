@@ -1,0 +1,23 @@
+{
+	"name": "ls_devvertixddnsnet_cdc",
+	"properties": {
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"server": "devvertix.ddns.net,5722",
+			"database": "bikestores",
+			"encrypt": "optional",
+			"trustServerCertificate": true,
+			"authenticationType": "SQL",
+			"userName": "integrator",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_kevaownlab30",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "secrdevvertixddnsnetbikestores"
+			}
+		}
+	}
+}
