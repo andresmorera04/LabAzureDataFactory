@@ -1,0 +1,96 @@
+{
+	"name": "pl_orquestador_bronce",
+	"properties": {
+		"activities": [
+			{
+				"name": "pl_bikestore_sales_orders_parquet",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_bikestore_sales_orders_daily",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_bikestore_sales_order_items_parquet",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_bikestore_sales_orders_parquet",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_bikestore_sales_order_items_daily",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_bikestore_production_products_daily",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_bikestore_sales_order_items_parquet",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_bikestore_production_products_daily",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pl_bikestore_sales_customers_daily",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pl_bikestore_production_products_daily",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_bikestore_sales_customers_daily",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"folder": {
+			"name": "Bronze/orchestrator"
+		},
+		"annotations": []
+	}
+}

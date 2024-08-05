@@ -1,0 +1,30 @@
+{
+	"name": "ds_datalake_sales_order_items_parquet",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_stacownlab30_datalake",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Datalake"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@concat('sales_order_items_',replace(substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 10), '-', ''),'.parquet')",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/order_items/', substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 4))",
+					"type": "Expression"
+				},
+				"fileSystem": "datalake"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	}
+}
