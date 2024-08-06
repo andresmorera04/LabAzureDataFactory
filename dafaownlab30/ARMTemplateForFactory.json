@@ -741,7 +741,7 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
-								"sqlReaderQuery": "SELECT \n\torder_id\n\t,customer_id\n\t,order_status\n\t,order_date\n\t,required_date\n\t,shipped_date\n\t,store_id\n\t,staff_id\nFROM \n\tsales.orders\nWHERE \n\torder_date >= CAST(CAST(GETDATE() AS DATE) AS DATETIME) \nAND order_date < CAST(CAST(DATEADD(DAY, 1, GETDATE()) AS DATE) AS DATETIME)",
+								"sqlReaderQuery": "SELECT \n\torder_id\n\t,customer_id\n\t,order_status\n\t,order_date\n\t,required_date\n\t,shipped_date\n\t,store_id\n\t,staff_id\nFROM \n\tsales.orders\nWHERE \n\t(order_date >= CAST(CAST(GETDATE() AS DATE) AS DATETIME) \nAND order_date < CAST(CAST(DATEADD(DAY, 1, GETDATE()) AS DATE) AS DATETIME))\nOR\n(\n\tshipped_date = CAST(GETDATE() AS DATE)\n)",
 								"queryTimeout": "00:30:00",
 								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
@@ -892,6 +892,351 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/ds_bikestores_sales_orders_sql')]",
 				"[concat(variables('factoryId'), '/datasets/ds_datalake_sales_orders_parquet')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_bikestore_sales_staffs')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "IngestaDatos",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.00:10:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"queryTimeout": "00:25:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"parallelCopies": 1,
+							"dataIntegrationUnits": 4,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "staff_id",
+											"type": "Int32",
+											"physicalType": "int"
+										},
+										"sink": {
+											"name": "staff_id",
+											"type": "Int32",
+											"physicalType": "INT_32"
+										}
+									},
+									{
+										"source": {
+											"name": "first_name",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "first_name",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "last_name",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "last_name",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "email",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "email",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "phone",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "phone",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "active",
+											"type": "Byte",
+											"physicalType": "tinyint"
+										},
+										"sink": {
+											"name": "active",
+											"type": "Byte",
+											"physicalType": "INT_32"
+										}
+									},
+									{
+										"source": {
+											"name": "store_id",
+											"type": "Int32",
+											"physicalType": "int"
+										},
+										"sink": {
+											"name": "store_id",
+											"type": "Int32",
+											"physicalType": "INT_32"
+										}
+									},
+									{
+										"source": {
+											"name": "manager_id",
+											"type": "Int32",
+											"physicalType": "int"
+										},
+										"sink": {
+											"name": "manager_id",
+											"type": "Int32",
+											"physicalType": "INT_32"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_bikestores_sales_staffs_sql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_datalake_sales_staffs_parquet",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Bronze/pipelines"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_bikestores_sales_staffs_sql')]",
+				"[concat(variables('factoryId'), '/datasets/ds_datalake_sales_staffs_parquet')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_bikestore_sales_stores')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "IngestaDatos",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.00:10:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"queryTimeout": "00:25:00",
+								"isolationLevel": "ReadCommitted",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"parallelCopies": 1,
+							"dataIntegrationUnits": 4,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "store_id",
+											"type": "Int32",
+											"physicalType": "int"
+										},
+										"sink": {
+											"name": "store_id",
+											"type": "Int32",
+											"physicalType": "INT_32"
+										}
+									},
+									{
+										"source": {
+											"name": "store_name",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "store_name",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "phone",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "phone",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "email",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "email",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "street",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "street",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "city",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "city",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "state",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "state",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									},
+									{
+										"source": {
+											"name": "zip_code",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "zip_code",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_bikestores_sales_stores_sql",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_datalake_sales_stores_parquet",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Bronze/pipelines"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_bikestores_sales_stores_sql')]",
+				"[concat(variables('factoryId'), '/datasets/ds_datalake_sales_stores_parquet')]"
 			]
 		},
 		{
@@ -1312,6 +1657,125 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/ds_bikestores_sales_staffs_sql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_source_devvertixddnsnet_BikeStores",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Sources/devvertixddnsnet"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "staff_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "first_name",
+						"type": "varchar"
+					},
+					{
+						"name": "last_name",
+						"type": "varchar"
+					},
+					{
+						"name": "email",
+						"type": "varchar"
+					},
+					{
+						"name": "phone",
+						"type": "varchar"
+					},
+					{
+						"name": "active",
+						"type": "tinyint",
+						"precision": 3
+					},
+					{
+						"name": "store_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "manager_id",
+						"type": "int",
+						"precision": 10
+					}
+				],
+				"typeProperties": {
+					"schema": "sales",
+					"table": "staffs"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_source_devvertixddnsnet_BikeStores')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_bikestores_sales_stores_sql')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_source_devvertixddnsnet_BikeStores",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Sources/devvertixddnsnet"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "store_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "store_name",
+						"type": "varchar"
+					},
+					{
+						"name": "phone",
+						"type": "varchar"
+					},
+					{
+						"name": "email",
+						"type": "varchar"
+					},
+					{
+						"name": "street",
+						"type": "varchar"
+					},
+					{
+						"name": "city",
+						"type": "varchar"
+					},
+					{
+						"name": "state",
+						"type": "varchar"
+					},
+					{
+						"name": "zip_code",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "sales",
+					"table": "stores"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_source_devvertixddnsnet_BikeStores')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ds_datalake_production_brands_parquet')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -1329,11 +1793,11 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('production_brands_',replace(substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('production_brands_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/production/brands/', substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 4))",
+							"value": "@concat('Bronze/devvertixddnsnet/bikestores/production/brands/', substring(addhours(utcnow(), -6), 0, 4))",
 							"type": "Expression"
 						},
 						"fileSystem": "datalake"
@@ -1364,11 +1828,11 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('production_categories_',replace(substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('production_categories_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/production/categories/', substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 4))",
+							"value": "@concat('Bronze/devvertixddnsnet/bikestores/production/categories/', substring(addhours(utcnow(), -6), 0, 4))",
 							"type": "Expression"
 						},
 						"fileSystem": "datalake"
@@ -1399,11 +1863,11 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('production_products_',replace(substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('production_products_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/production/products/', substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 4))",
+							"value": "@concat('Bronze/devvertixddnsnet/bikestores/production/products/', substring(addhours(utcnow(), -6), 0, 4))",
 							"type": "Expression"
 						},
 						"fileSystem": "datalake"
@@ -1434,11 +1898,11 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('sales_customers_',replace(substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('sales_customers_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/customers/', substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 4))",
+							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/customers/', substring(addhours(utcnow(), -6), 0, 4))",
 							"type": "Expression"
 						},
 						"fileSystem": "datalake"
@@ -1469,11 +1933,11 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('sales_order_items_',replace(substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('sales_order_items_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/order_items/', substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 4))",
+							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/order_items/', substring(addhours(utcnow(), -6), 0, 4))",
 							"type": "Expression"
 						},
 						"fileSystem": "datalake"
@@ -1504,11 +1968,81 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('sales_orders_', replace(substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 10), '-', ''), '.parquet')",
+							"value": "@concat('sales_orders_', replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''), '.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/orders/', substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 4))",
+							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/orders/', substring(addhours(utcnow(), -6), 0, 4))",
+							"type": "Expression"
+						},
+						"fileSystem": "datalake"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_stacownlab30_datalake')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_datalake_sales_staffs_parquet')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_stacownlab30_datalake",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Datalake"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@concat('sales_staffs_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/staffs/', substring(addhours(utcnow(), -6), 0, 4))",
+							"type": "Expression"
+						},
+						"fileSystem": "datalake"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_stacownlab30_datalake')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_datalake_sales_stores_parquet')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_stacownlab30_datalake",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Datalake"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@concat('sales_stores_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/stores/', substring(addhours(utcnow(), -6), 0, 4))",
 							"type": "Expression"
 						},
 						"fileSystem": "datalake"
