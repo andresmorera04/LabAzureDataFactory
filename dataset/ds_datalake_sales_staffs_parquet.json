@@ -14,11 +14,11 @@
 			"location": {
 				"type": "AzureBlobFSLocation",
 				"fileName": {
-					"value": "@concat('sales_staffs_',replace(substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 10), '-', ''),'.parquet')",
+					"value": "@concat('sales_staffs_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
 					"type": "Expression"
 				},
 				"folderPath": {
-					"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/staffs/', substring(convertTimeZone(utcnow(), 'UTC', 'Central Standard Time'), 0, 4))",
+					"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/staffs/', substring(addhours(utcnow(), -6), 0, 4))",
 					"type": "Expression"
 				},
 				"fileSystem": "datalake"
