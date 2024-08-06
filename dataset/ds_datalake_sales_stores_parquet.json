@@ -1,5 +1,5 @@
 {
-	"name": "ds_datalake_production_products_parquet",
+	"name": "ds_datalake_sales_stores_parquet",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "ls_stacownlab30_datalake",
@@ -14,11 +14,11 @@
 			"location": {
 				"type": "AzureBlobFSLocation",
 				"fileName": {
-					"value": "@concat('production_products_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
+					"value": "@concat('sales_stores_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
 					"type": "Expression"
 				},
 				"folderPath": {
-					"value": "@concat('Bronze/devvertixddnsnet/bikestores/production/products/', substring(addhours(utcnow(), -6), 0, 4))",
+					"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/stores/', substring(addhours(utcnow(), -6), 0, 4))",
 					"type": "Expression"
 				},
 				"fileSystem": "datalake"
