@@ -1,0 +1,23 @@
+{
+	"name": "ds_datalake_openlibraryorg_search",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_stacownlab30_datalake",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Datalake"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "data.json",
+				"folderPath": "Bronze/api_rest/openlibraryorg/search",
+				"fileSystem": "datalake"
+			}
+		},
+		"schema": {}
+	}
+}
