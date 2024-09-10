@@ -1,0 +1,21 @@
+{
+	"name": "RestResource1",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_rest_api_test",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Sources/openlibraryorg"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": {
+				"value": "@concat('search.json?q=crime+and+punishment&fields=key,title,author_name,editions,editions.key,editions.title,editions.ebook_access,editions.language')",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	}
+}
