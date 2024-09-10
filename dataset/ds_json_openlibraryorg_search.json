@@ -1,5 +1,5 @@
 {
-	"name": "RestResource1",
+	"name": "ds_json_openlibraryorg_search",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "ls_rest_api_test",
