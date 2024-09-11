@@ -1,5 +1,5 @@
 {
-	"name": "pipeline1",
+	"name": "pl_rest_openlibrary_search",
 	"properties": {
 		"activities": [
 			{
