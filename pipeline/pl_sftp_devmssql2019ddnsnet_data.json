@@ -241,8 +241,7 @@
 									"physicalType": "String"
 								},
 								"sink": {
-									"name": "Sub-Category",
-									"type": "String",
+									"name": "Sub Category",
 									"physicalType": "UTF8"
 								}
 							},
