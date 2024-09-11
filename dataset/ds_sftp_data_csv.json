@@ -16,7 +16,7 @@
 				"fileName": "Global_Superstore2.csv",
 				"folderPath": "/uploads"
 			},
-			"columnDelimiter": ",",
+			"columnDelimiter": ";",
 			"escapeChar": "\\",
 			"firstRowAsHeader": true,
 			"quoteChar": "\""
