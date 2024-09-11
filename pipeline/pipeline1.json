@@ -1,0 +1,118 @@
+{
+	"name": "pipeline1",
+	"properties": {
+		"activities": [
+			{
+				"name": "Ingesta de Datos",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"httpRequestTimeout": "00:01:40",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "GET"
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"parallelCopies": 1,
+					"dataIntegrationUnits": 4,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"path": "$['numFound']"
+								},
+								"sink": {
+									"path": "numFound"
+								}
+							},
+							{
+								"source": {
+									"path": "$['start']"
+								},
+								"sink": {
+									"path": "start"
+								}
+							},
+							{
+								"source": {
+									"path": "$['numFoundExact']"
+								},
+								"sink": {
+									"path": "numFoundExact"
+								}
+							},
+							{
+								"source": {
+									"path": "$['docs']"
+								},
+								"sink": {
+									"path": "docs"
+								}
+							},
+							{
+								"source": {
+									"path": "$['num_found']"
+								},
+								"sink": {
+									"path": "num_found"
+								}
+							},
+							{
+								"source": {
+									"path": "$['q']"
+								},
+								"sink": {
+									"path": "q"
+								}
+							},
+							{
+								"source": {
+									"path": "$['offset']"
+								},
+								"sink": {
+									"path": "offset"
+								}
+							}
+						],
+						"collectionReference": ""
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_json_openlibraryorg_search",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_datalake_openlibraryorg_search",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"folder": {
+			"name": "Bronze/pipelines"
+		},
+		"annotations": []
+	}
+}
