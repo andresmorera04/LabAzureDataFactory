@@ -1,0 +1,33 @@
+{
+	"name": "ds_bikestores_dbo_parametros",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_source_devvertixddnsnet_BikeStores",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Sources/devvertixddnsnet"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [
+			{
+				"name": "Codigo",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Clave",
+				"type": "varchar"
+			},
+			{
+				"name": "Valor",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "Parametros"
+		}
+	}
+}
