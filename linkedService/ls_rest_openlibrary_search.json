@@ -1,0 +1,12 @@
+{
+	"name": "ls_rest_openlibrary_search",
+	"properties": {
+		"annotations": [],
+		"type": "RestService",
+		"typeProperties": {
+			"url": "https://openlibrary.org",
+			"enableServerCertificateValidation": true,
+			"authenticationType": "Anonymous"
+		}
+	}
+}
