@@ -1,0 +1,27 @@
+{
+	"name": "ds_rest_openlibrary_dynamicsearch",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_rest_openlibrary_search",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"pr_NombreLibro": {
+				"type": "string",
+				"defaultValue": "Narnia"
+			}
+		},
+		"folder": {
+			"name": "Sources/ApiRestOpenLibrary"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": {
+				"value": "@concat('/search.json?q=', dataset().pr_NombreLibro,'&fields=key,title,author_name,editions,editions.key,editions.title,editions.ebook_access,editions.language')",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	}
+}
