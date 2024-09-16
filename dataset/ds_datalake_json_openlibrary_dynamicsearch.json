@@ -1,0 +1,32 @@
+{
+	"name": "ds_datalake_json_openlibrary_dynamicsearch",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_stacownlab30_datalake",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"pr_NombreJson": {
+				"type": "string",
+				"defaultValue": "prueba.json"
+			}
+		},
+		"folder": {
+			"name": "Datalake/Aula Invertida Nivel 1"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().pr_NombreJson",
+					"type": "Expression"
+				},
+				"folderPath": "Nivel1/AndresMoreraGarita/Api/OpenLibrary/Search",
+				"fileSystem": "aulainvertida"
+			}
+		},
+		"schema": {}
+	}
+}

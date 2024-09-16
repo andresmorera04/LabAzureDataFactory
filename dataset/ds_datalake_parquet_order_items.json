@@ -1,0 +1,36 @@
+{
+	"name": "ds_datalake_parquet_order_items",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_stacownlab30_datalake",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"pr_FechaProceso": {
+				"type": "string",
+				"defaultValue": "1800-01-01"
+			}
+		},
+		"folder": {
+			"name": "Datalake/Aula Invertida Nivel 1"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@concat('order_items_', replace(dataset().pr_FechaProceso,'-', ''),'.parquet')",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat('Nivel1/AndresMoreraGarita/BikeStores/Sales/Order_Items/', substring(dataset().pr_FechaProceso, 0, 4))",
+					"type": "Expression"
+				},
+				"fileSystem": "aulainvertida"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	}
+}

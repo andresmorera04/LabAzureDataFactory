@@ -1,0 +1,24 @@
+{
+	"name": "ds_datalake_parquet_global_superstore",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_stacownlab30_datalake",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Datalake/Aula Invertida Nivel 1"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "superstore2.parquet",
+				"folderPath": "Nivel1/AndresMoreraGarita/Sftp/Global/Superstore",
+				"fileSystem": "aulainvertida"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	}
+}
