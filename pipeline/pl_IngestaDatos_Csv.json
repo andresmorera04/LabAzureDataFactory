@@ -37,6 +37,8 @@
 						}
 					},
 					"enableStaging": false,
+					"parallelCopies": 1,
+					"dataIntegrationUnits": 4,
 					"translator": {
 						"type": "TabularTranslator",
 						"mappings": [
