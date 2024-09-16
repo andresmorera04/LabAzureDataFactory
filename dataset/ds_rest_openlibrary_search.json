@@ -1,0 +1,18 @@
+{
+	"name": "ds_rest_openlibrary_search",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_rest_openlibrary_search",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Sources/ApiRestOpenLibrary"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": "/search.json?q=crime+and+punishment&fields=key,title,author_name,editions,editions.key,editions.title,editions.ebook_access,editions.language"
+		},
+		"schema": []
+	}
+}

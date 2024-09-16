@@ -1,0 +1,123 @@
+{
+	"name": "ds_sftp_Global_Superstore2",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_sftp_devmssql2019ddnsnet",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Sources/SftpDevMssql2019DdnsNet"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"fileName": "Global_Superstore2.csv",
+				"folderPath": "/uploads"
+			},
+			"columnDelimiter": ";",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "Row ID",
+				"type": "String"
+			},
+			{
+				"name": "Order ID",
+				"type": "String"
+			},
+			{
+				"name": "Order Date",
+				"type": "String"
+			},
+			{
+				"name": "Ship Date",
+				"type": "String"
+			},
+			{
+				"name": "Ship Mode",
+				"type": "String"
+			},
+			{
+				"name": "Customer ID",
+				"type": "String"
+			},
+			{
+				"name": "Customer Name",
+				"type": "String"
+			},
+			{
+				"name": "Segment",
+				"type": "String"
+			},
+			{
+				"name": "City",
+				"type": "String"
+			},
+			{
+				"name": "State",
+				"type": "String"
+			},
+			{
+				"name": "Country",
+				"type": "String"
+			},
+			{
+				"name": "Postal Code",
+				"type": "String"
+			},
+			{
+				"name": "Market",
+				"type": "String"
+			},
+			{
+				"name": "Region",
+				"type": "String"
+			},
+			{
+				"name": "Product ID",
+				"type": "String"
+			},
+			{
+				"name": "Category",
+				"type": "String"
+			},
+			{
+				"name": "Sub-Category",
+				"type": "String"
+			},
+			{
+				"name": "Product Name",
+				"type": "String"
+			},
+			{
+				"name": "Sales",
+				"type": "String"
+			},
+			{
+				"name": "Quantity",
+				"type": "String"
+			},
+			{
+				"name": "Discount",
+				"type": "String"
+			},
+			{
+				"name": "Profit",
+				"type": "String"
+			},
+			{
+				"name": "Shipping Cost",
+				"type": "String"
+			},
+			{
+				"name": "Order Priority",
+				"type": "String"
+			}
+		]
+	}
+}
