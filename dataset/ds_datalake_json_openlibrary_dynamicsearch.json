@@ -9,6 +9,10 @@
 			"pr_NombreJson": {
 				"type": "string",
 				"defaultValue": "prueba.json"
+			},
+			"pr_UltimoDirectorio": {
+				"type": "string",
+				"defaultValue": "Search"
 			}
 		},
 		"folder": {
@@ -23,7 +27,10 @@
 					"value": "@dataset().pr_NombreJson",
 					"type": "Expression"
 				},
-				"folderPath": "Nivel1/AndresMoreraGarita/Api/OpenLibrary/Search",
+				"folderPath": {
+					"value": "@concat('Nivel1/AndresMoreraGarita/Api/OpenLibrary/',dataset().pr_UltimoDirectorio)",
+					"type": "Expression"
+				},
 				"fileSystem": "aulainvertida"
 			}
 		},
