@@ -106,7 +106,8 @@
 						"referenceName": "ds_datalake_json_openlibrary_dynamicsearch",
 						"type": "DatasetReference",
 						"parameters": {
-							"pr_NombreJson": "Search.json"
+							"pr_NombreJson": "Search.json",
+							"pr_UltimoDirectorio": "Search"
 						}
 					}
 				]
