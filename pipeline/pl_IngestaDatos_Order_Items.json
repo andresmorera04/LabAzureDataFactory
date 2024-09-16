@@ -1,0 +1,183 @@
+{
+	"name": "pl_IngestaDatos_Order_Items",
+	"properties": {
+		"activities": [
+			{
+				"name": "ObtenerFechaProceso",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT \r\n\tValor AS FechaProceso\r\nFROM \r\n\tdbo.Parametros\r\nWHERE\t\r\n\tCodigo = 1\r\n;",
+						"queryTimeout": "00:30:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_bikestores_dbo_parametros",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Ingesta Datos",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "ObtenerFechaProceso",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@concat('SELECT \n\tA.[order_id]\n\t,A.[item_id]\n\t,A.[product_id]\n\t,A.[quantity]\n\t,A.[list_price]\n\t,A.[discount]\nFROM \n\t[sales].[order_items] AS A \n\tINNER JOIN sales.orders AS B \n\t\tON A.order_id = B.order_id\nWHERE \n\tB.order_date = '\n    ,''''\n    ,activity('ObtenerFechaProceso').output.firstRow.FechaProceso\n    ,'''')",
+							"type": "Expression"
+						},
+						"queryTimeout": "00:30:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"parallelCopies": 1,
+					"dataIntegrationUnits": 4,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "order_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "order_id",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "item_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "item_id",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "product_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "product_id",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "quantity",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "quantity",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "list_price",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 2,
+									"precision": 10
+								},
+								"sink": {
+									"name": "list_price",
+									"type": "Decimal",
+									"physicalType": "DECIMAL"
+								}
+							},
+							{
+								"source": {
+									"name": "discount",
+									"type": "Decimal",
+									"physicalType": "decimal",
+									"scale": 2,
+									"precision": 4
+								},
+								"sink": {
+									"name": "discount",
+									"type": "Decimal",
+									"physicalType": "DECIMAL"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_bikestores_sales_order_items_sql",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_datalake_parquet_order_items",
+						"type": "DatasetReference",
+						"parameters": {
+							"pr_FechaProceso": {
+								"value": "@activity('ObtenerFechaProceso').output.firstRow.FechaProceso",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			}
+		],
+		"folder": {
+			"name": "Bronze/pipelines/Aula Invertida Nivel 1"
+		},
+		"annotations": []
+	}
+}
