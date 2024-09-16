@@ -47,8 +47,7 @@
 									"physicalType": "String"
 								},
 								"sink": {
-									"name": "Row ID",
-									"type": "String",
+									"name": "RowID",
 									"physicalType": "UTF8"
 								}
 							},
