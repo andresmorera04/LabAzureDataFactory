@@ -1,0 +1,158 @@
+{
+	"name": "pl_IngestaDatos_json2_Dinamico",
+	"properties": {
+		"activities": [
+			{
+				"name": "Ingesta Datos",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Obtener Parametro",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"httpRequestTimeout": "00:00:30",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "GET"
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"parallelCopies": 1,
+					"dataIntegrationUnits": 4,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"path": "$['numFound']"
+								},
+								"sink": {
+									"path": "numFound"
+								}
+							},
+							{
+								"source": {
+									"path": "$['start']"
+								},
+								"sink": {
+									"path": "start"
+								}
+							},
+							{
+								"source": {
+									"path": "$['numFoundExact']"
+								},
+								"sink": {
+									"path": "numFoundExact"
+								}
+							},
+							{
+								"source": {
+									"path": "$['docs']"
+								},
+								"sink": {
+									"path": "docs"
+								}
+							},
+							{
+								"source": {
+									"path": "$['num_found']"
+								},
+								"sink": {
+									"path": "num_found"
+								}
+							},
+							{
+								"source": {
+									"path": "$['q']"
+								},
+								"sink": {
+									"path": "q"
+								}
+							},
+							{
+								"source": {
+									"path": "$['offset']"
+								},
+								"sink": {
+									"path": "offset"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_rest_openlibrary_dynamicsearch",
+						"type": "DatasetReference",
+						"parameters": {
+							"pr_NombreLibro": {
+								"value": "@activity('Obtener Parametro').output.firstRow.Libro",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_datalake_json_openlibrary_dynamicsearch",
+						"type": "DatasetReference",
+						"parameters": {
+							"pr_NombreJson": "SearchDinamico.json"
+						}
+					}
+				]
+			},
+			{
+				"name": "Obtener Parametro",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT \r\n\tValor AS Libro\r\nFROM \r\n\tdbo.Parametros\r\nWHERE\t\r\n\tCodigo = 2\r\n;",
+						"queryTimeout": "00:30:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_bikestores_dbo_parametros",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "Bronze/pipelines/Aula Invertida Nivel 1"
+		},
+		"annotations": []
+	}
+}
