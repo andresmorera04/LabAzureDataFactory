@@ -1,0 +1,214 @@
+{
+	"name": "pl_ingesta_bikestore_orders_clavevalor",
+	"properties": {
+		"activities": [
+			{
+				"name": "ObtenerParametros",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "DECLARE\r\n\t@FechaProceso VARCHAR(10)\r\n\t,@Contenedor VARCHAR(25)\r\n\t,@Medalla VARCHAR(25)\r\n\r\nSELECT @FechaProceso = Valor FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatos';\r\nSELECT @Medalla = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce';\r\n\r\nSELECT \r\n\t@FechaProceso AS FechaProceso, @Contenedor AS Contenedor, @Medalla AS MedallaBronce\r\n",
+						"queryTimeout": "00:25:00",
+						"isolationLevel": "ReadCommitted",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_configuracion_parametros",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "IngestaDatos",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "ObtenerParametros",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "SELECT \n\torder_id\n\t,customer_id\n\t,order_status\n\t,order_date\n\t,required_date\n\t,shipped_date\n\t,store_id\n\t,staff_id\nFROM \n\tsales.orders\nWHERE \n\torder_date >= CONVERT(datetime, '@{activity('ObtenerParametros').output.firstRow.FechaProceso}')\n\tAND order_date <= DATEADD(SECOND, 86399, CONVERT(DATETIME, '@{activity('ObtenerParametros').output.firstRow.FechaProceso}'))\n",
+							"type": "Expression"
+						},
+						"queryTimeout": "00:30:00",
+						"isolationLevel": "ReadCommitted",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"parallelCopies": 1,
+					"dataIntegrationUnits": 4,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "order_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "order_id",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "customer_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "customer_id",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "order_status",
+									"type": "Byte",
+									"physicalType": "tinyint"
+								},
+								"sink": {
+									"name": "order_status",
+									"type": "Byte",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "order_date",
+									"type": "DateTime",
+									"physicalType": "datetime"
+								},
+								"sink": {
+									"name": "order_date",
+									"type": "DateTime",
+									"physicalType": "INT_96"
+								}
+							},
+							{
+								"source": {
+									"name": "required_date",
+									"type": "DateTime",
+									"physicalType": "date"
+								},
+								"sink": {
+									"name": "required_date",
+									"type": "DateTime",
+									"physicalType": "INT_96"
+								}
+							},
+							{
+								"source": {
+									"name": "shipped_date",
+									"type": "DateTime",
+									"physicalType": "date"
+								},
+								"sink": {
+									"name": "shipped_date",
+									"type": "DateTime",
+									"physicalType": "INT_96"
+								}
+							},
+							{
+								"source": {
+									"name": "store_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "store_id",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "staff_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "staff_id",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_bikestores_sales_orders_sql",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_datalake_sales_orders_clavevalor_parquet",
+						"type": "DatasetReference",
+						"parameters": {
+							"medallaBronce": {
+								"value": "@activity('ObtenerParametros').output.firstRow.MedallaBronce",
+								"type": "Expression"
+							},
+							"fechaProceso": {
+								"value": "@activity('ObtenerParametros').output.firstRow.FechaProceso",
+								"type": "Expression"
+							},
+							"contenedorLagoDatos": {
+								"value": "@activity('ObtenerParametros').output.firstRow.Contenedor",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			}
+		],
+		"folder": {
+			"name": "Bronze/pipelines"
+		},
+		"annotations": []
+	}
+}
