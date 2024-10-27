@@ -1,0 +1,206 @@
+{
+	"name": "pl_ingesta_orders_fecha_clavevalor",
+	"properties": {
+		"activities": [
+			{
+				"name": "CargarParametros",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "DECLARE \r\n\t@FechaProceso VARCHAR(10)\r\n\t,@MedallaBronce VARCHAR(20)\r\n\r\nSELECT @FechaProceso = Valor FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\n\r\nSELECT @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce';\r\n\r\nSELECT @FechaProceso AS FechaProceso, @MedallaBronce AS MedallaBronce;",
+						"queryTimeout": "00:25:00",
+						"isolationLevel": "ReadCommitted",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_configuracion_parametros",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "IngestaDatos",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "CargarParametros",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.00:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT \r\n\torder_id\r\n\t,customer_id\r\n\t,order_status\r\n\t,order_date\r\n\t,required_date\r\n\t,shipped_date\r\n\t,store_id\r\n\t,staff_id\r\nFROM \r\n\tsales.orders\r\nWHERE \r\n\torder_date >= CONVERT(datetime, '@{activity('CargarParametros').output.firstRow.FechaProceso}')\r\n\tAND order_date <= DATEADD(SECOND, 86399, CONVERT(DATETIME, '@{activity('CargarParametros').output.firstRow.FechaProceso}'))\r\n",
+						"queryTimeout": "00:30:00",
+						"isolationLevel": "ReadCommitted",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"parallelCopies": 1,
+					"dataIntegrationUnits": 4,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "order_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "order_id",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "customer_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "customer_id",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "order_status",
+									"type": "Byte",
+									"physicalType": "tinyint"
+								},
+								"sink": {
+									"name": "order_status",
+									"type": "Byte",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "order_date",
+									"type": "DateTime",
+									"physicalType": "datetime"
+								},
+								"sink": {
+									"name": "order_date",
+									"type": "DateTime",
+									"physicalType": "INT_96"
+								}
+							},
+							{
+								"source": {
+									"name": "required_date",
+									"type": "DateTime",
+									"physicalType": "date"
+								},
+								"sink": {
+									"name": "required_date",
+									"type": "DateTime",
+									"physicalType": "INT_96"
+								}
+							},
+							{
+								"source": {
+									"name": "shipped_date",
+									"type": "DateTime",
+									"physicalType": "date"
+								},
+								"sink": {
+									"name": "shipped_date",
+									"type": "DateTime",
+									"physicalType": "INT_96"
+								}
+							},
+							{
+								"source": {
+									"name": "store_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "store_id",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							},
+							{
+								"source": {
+									"name": "staff_id",
+									"type": "Int32",
+									"physicalType": "int"
+								},
+								"sink": {
+									"name": "staff_id",
+									"type": "Int32",
+									"physicalType": "INT_32"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_bikestores_sales_orders_sql",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_datalake_sales_orders_fecha_clavevalor_parquet",
+						"type": "DatasetReference",
+						"parameters": {
+							"medalla": {
+								"value": "@activity('CargarParametros').output.firstRow.MedallaBronce",
+								"type": "Expression"
+							},
+							"fechaProceso": {
+								"value": "@activity('CargarParametros').output.firstRow.FechaProceso",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			}
+		],
+		"folder": {
+			"name": "Bronze/pipelines"
+		},
+		"annotations": []
+	}
+}
