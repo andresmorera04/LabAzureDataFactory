@@ -1,0 +1,47 @@
+{
+	"name": "ds_datalake_sales_orders_clavevalor_parquet",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_stacownlab30_datalake",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"medallaBronce": {
+				"type": "string",
+				"defaultValue": "Bronze"
+			},
+			"fechaProceso": {
+				"type": "string",
+				"defaultValue": "1900-01-01"
+			},
+			"contenedorLagoDatos": {
+				"type": "string",
+				"defaultValue": "datalake"
+			}
+		},
+		"folder": {
+			"name": "Datalake"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@concat('orders_', replace(dataset().fechaProceso, '-', ''), '.parquet')",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat(dataset().medallaBronce, '/devvertixddnsnet/bikestores/sales/orders/año=', substring(dataset().fechaProceso, 0, 4),'/mes=', substring(dataset().fechaProceso, 5, 2), '/dia=',substring(dataset().fechaProceso, 8, 2), '/')",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().contenedorLagoDatos",
+					"type": "Expression"
+				}
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	}
+}
