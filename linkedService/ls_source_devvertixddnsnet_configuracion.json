@@ -1,0 +1,24 @@
+{
+	"name": "ls_source_devvertixddnsnet_configuracion",
+	"properties": {
+		"description": "Linked Services que se conecta a un servidor SQL Server a una base de datos llamada configuracion",
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"server": "devvertix.ddns.net,5722",
+			"database": "CONFIGURACION",
+			"encrypt": "optional",
+			"trustServerCertificate": true,
+			"authenticationType": "SQL",
+			"userName": "integrator",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_kevaownlab30",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "secrdevvertixddnsnetbikestores"
+			}
+		}
+	}
+}
