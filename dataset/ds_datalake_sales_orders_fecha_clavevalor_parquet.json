@@ -28,7 +28,7 @@
 					"type": "Expression"
 				},
 				"folderPath": {
-					"value": "@concat(dataset().medalla, '/devvertixddnsnet/bikestores/sales/orders','año=',substring(dataset().fechaProceso, 0, 4), '/mes=',substring(dataset().fechaProceso,5,2),'/dia=',substring(dataset().fechaProceso, 8, 2),'/')",
+					"value": "@concat(dataset().medalla, '/devvertixddnsnet/bikestores/sales/orders/','año=',substring(dataset().fechaProceso, 0, 4), '/mes=',substring(dataset().fechaProceso,5,2),'/dia=',substring(dataset().fechaProceso, 8, 2),'/')",
 					"type": "Expression"
 				},
 				"fileSystem": "datalake"
