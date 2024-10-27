@@ -1,0 +1,24 @@
+{
+	"name": "ls_source_devvertixddnsnet_Configuracion",
+	"properties": {
+		"description": "Linked Services al servidor devvertixddnsnet a la base de datos Configuracion",
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"server": "devvertix.ddns.net,5722",
+			"database": "CONFIGURACION",
+			"encrypt": "optional",
+			"trustServerCertificate": true,
+			"authenticationType": "SQL",
+			"userName": "integrator",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_kevaownlab30",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "secrdevvertixddnsnetbikestores"
+			}
+		}
+	}
+}
