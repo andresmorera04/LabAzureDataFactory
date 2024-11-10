@@ -39,6 +39,12 @@
 					"referenceName": "pl_bikestore_sales_orders_daily",
 					"type": "PipelineReference"
 				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "pl_bikestore_sales_staffs",
+					"type": "PipelineReference"
+				}
 			}
 		],
 		"type": "ScheduleTrigger",
