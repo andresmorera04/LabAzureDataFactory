@@ -1,5 +1,10 @@
 {
 	"name": "dafaownlab30",
+	"properties": {
+		"globalConfigurations": {
+			"PipelineBillingEnabled": "true"
+		}
+	},
 	"location": "eastus2",
 	"identity": {
 		"type": "SystemAssigned",
