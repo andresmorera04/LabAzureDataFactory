@@ -46,7 +46,8 @@
 						"value": "@activity('ObtenerParametros').output.value",
 						"type": "Expression"
 					},
-					"isSequential": true,
+					"isSequential": false,
+					"batchCount": 5,
 					"activities": [
 						{
 							"name": "IngestaDatos",
