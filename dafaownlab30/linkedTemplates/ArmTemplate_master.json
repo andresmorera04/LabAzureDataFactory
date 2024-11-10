@@ -23,6 +23,10 @@
 			"type": "string",
 			"defaultValue": "integrator"
 		},
+		"ls_source_devvertixddnsnet_Configuracion_properties_typeProperties_connectionString_secretName": {
+			"type": "string",
+			"defaultValue": "secrdevvertixddnsnetstringconn"
+		},
 		"ls_stacownlab30_datalake_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://stacownlab30.dfs.core.windows.net"
@@ -43,7 +47,7 @@
 		{
 			"name": "dafaownlab30_ArmTemplate_0",
 			"type": "Microsoft.Resources/deployments",
-			"apiVersion": "2018-02-01",
+			"apiVersion": "2024-03-01",
 			"properties": {
 				"mode": "incremental",
 				"templateLink": {
@@ -66,6 +70,9 @@
 					"ls_source_devvertixddnsnet_BikeStores_properties_typeProperties_userName": {
 						"value": "[parameters('ls_source_devvertixddnsnet_BikeStores_properties_typeProperties_userName')]"
 					},
+					"ls_source_devvertixddnsnet_Configuracion_properties_typeProperties_connectionString_secretName": {
+						"value": "[parameters('ls_source_devvertixddnsnet_Configuracion_properties_typeProperties_connectionString_secretName')]"
+					},
 					"ls_stacownlab30_datalake_properties_typeProperties_url": {
 						"value": "[parameters('ls_stacownlab30_datalake_properties_typeProperties_url')]"
 					}
@@ -76,7 +83,7 @@
 		{
 			"name": "dafaownlab30_ArmTemplate_1",
 			"type": "Microsoft.Resources/deployments",
-			"apiVersion": "2018-02-01",
+			"apiVersion": "2024-03-01",
 			"properties": {
 				"mode": "incremental",
 				"templateLink": {

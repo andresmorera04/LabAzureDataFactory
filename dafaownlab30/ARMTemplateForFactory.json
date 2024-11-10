@@ -23,6 +23,10 @@
 			"type": "string",
 			"defaultValue": "integrator"
 		},
+		"ls_source_devvertixddnsnet_Configuracion_properties_typeProperties_connectionString_secretName": {
+			"type": "string",
+			"defaultValue": "secrdevvertixddnsnetstringconn"
+		},
 		"ls_stacownlab30_datalake_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://stacownlab30.dfs.core.windows.net"
@@ -39,8 +43,8 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "IngestaDatos",
-						"type": "Copy",
+						"name": "ObtenerParametros",
+						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
 							"timeout": "0.00:10:00",
@@ -53,70 +57,136 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
-								"queryTimeout": "00:25:00",
+								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;\r\n",
+								"queryTimeout": "00:20:00",
+								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
-							"sink": {
-								"type": "ParquetSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "ParquetWriteSettings"
-								}
-							},
-							"enableStaging": false,
-							"parallelCopies": 1,
-							"dataIntegrationUnits": 4,
-							"translator": {
-								"type": "TabularTranslator",
-								"mappings": [
-									{
-										"source": {
-											"name": "brand_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "brand_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "brand_name",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "brand_name",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									}
-								],
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_bikestores_production_brands_sql",
+							"dataset": {
+								"referenceName": "ds_sql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "RecorrerDias",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "ObtenerParametros",
+								"dependencyConditions": [
+									"Succeeded"
+								]
 							}
 						],
-						"outputs": [
-							{
-								"referenceName": "ds_datalake_production_brands_parquet",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('ObtenerParametros').output.value",
+								"type": "Expression"
+							},
+							"isSequential": false,
+							"batchCount": 5,
+							"activities": [
+								{
+									"name": "IngestaDatos",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:10:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"queryTimeout": "00:20:00",
+											"isolationLevel": "ReadCommitted",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": 1,
+										"validateDataConsistency": false,
+										"dataIntegrationUnits": 4,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "brand_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "brand_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "brand_name",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "brand_name",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_bikestores_production_brands_sql",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_datalake_production_brands_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"FechaProceso": {
+													"value": "@substring(item().FechaProceso, 0, 10)",
+													"type": "Expression"
+												},
+												"Contenedor": {
+													"value": "@item().Contenedor",
+													"type": "Expression"
+												},
+												"MedallaBronce": {
+													"value": "@item().Medalla",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
 					}
 				],
 				"policy": {
@@ -128,6 +198,7 @@
 				"annotations": []
 			},
 			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]",
 				"[concat(variables('factoryId'), '/datasets/ds_bikestores_production_brands_sql')]",
 				"[concat(variables('factoryId'), '/datasets/ds_datalake_production_brands_parquet')]"
 			]
@@ -139,8 +210,8 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "IngestaDatos",
-						"type": "Copy",
+						"name": "ObtenerParametros",
+						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
 							"timeout": "0.00:10:00",
@@ -153,71 +224,133 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
-								"queryTimeout": "00:30:00",
+								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
+								"queryTimeout": "00:20:00",
 								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
-							"sink": {
-								"type": "ParquetSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "ParquetWriteSettings"
-								}
-							},
-							"enableStaging": false,
-							"parallelCopies": 1,
-							"dataIntegrationUnits": 4,
-							"translator": {
-								"type": "TabularTranslator",
-								"mappings": [
-									{
-										"source": {
-											"name": "category_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "category_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "category_name",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "category_name",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									}
-								],
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_bikestores_production_categories_sql",
+							"dataset": {
+								"referenceName": "ds_sql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "RecorrerFechas",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "ObtenerParametros",
+								"dependencyConditions": [
+									"Succeeded"
+								]
 							}
 						],
-						"outputs": [
-							{
-								"referenceName": "ds_datalake_production_categories_parquet",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('ObtenerParametros').output.value",
+								"type": "Expression"
+							},
+							"batchCount": 5,
+							"activities": [
+								{
+									"name": "IngestaDatos",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:10:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"queryTimeout": "00:20:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": 1,
+										"dataIntegrationUnits": 4,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "category_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "category_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "category_name",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "category_name",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_bikestores_production_categories_sql",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_datalake_production_categories_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"FechaProceso": {
+													"value": "@substring(item().FechaProceso, 0, 10)",
+													"type": "Expression"
+												},
+												"Contenedor": {
+													"value": "@item().Contenedor",
+													"type": "Expression"
+												},
+												"MedallaBronce": {
+													"value": "@item().Medalla",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
 					}
 				],
 				"policy": {
@@ -229,6 +362,7 @@
 				"annotations": []
 			},
 			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]",
 				"[concat(variables('factoryId'), '/datasets/ds_bikestores_production_categories_sql')]",
 				"[concat(variables('factoryId'), '/datasets/ds_datalake_production_categories_parquet')]"
 			]
@@ -240,8 +374,8 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "IngestaDatos",
-						"type": "Copy",
+						"name": "ObtenerParametros",
+						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
 							"timeout": "0.00:10:00",
@@ -254,120 +388,184 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
-								"queryTimeout": "00:25:00",
+								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;\r\n",
+								"queryTimeout": "00:20:00",
+								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
-							"sink": {
-								"type": "ParquetSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "ParquetWriteSettings"
-								}
-							},
-							"enableStaging": false,
-							"parallelCopies": 1,
-							"dataIntegrationUnits": 4,
-							"translator": {
-								"type": "TabularTranslator",
-								"mappings": [
-									{
-										"source": {
-											"name": "product_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "product_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "product_name",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "product_name",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "brand_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "brand_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "category_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "category_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "model_year",
-											"type": "Int16",
-											"physicalType": "smallint"
-										},
-										"sink": {
-											"name": "model_year",
-											"type": "Int16",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "list_price",
-											"type": "Decimal",
-											"physicalType": "decimal",
-											"scale": 2,
-											"precision": 10
-										},
-										"sink": {
-											"name": "list_price",
-											"type": "Decimal",
-											"physicalType": "DECIMAL"
-										}
-									}
-								],
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_bikestores_production_products_sql",
+							"dataset": {
+								"referenceName": "ds_sql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "RecorrerFechas",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "ObtenerParametros",
+								"dependencyConditions": [
+									"Succeeded"
+								]
 							}
 						],
-						"outputs": [
-							{
-								"referenceName": "ds_datalake_production_products_parquet",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('ObtenerParametros').output.value",
+								"type": "Expression"
+							},
+							"batchCount": 5,
+							"activities": [
+								{
+									"name": "IngestaDatos",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:10:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"queryTimeout": "00:20:00",
+											"isolationLevel": "ReadCommitted",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": 1,
+										"dataIntegrationUnits": 4,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "product_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "product_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "product_name",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "product_name",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "brand_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "brand_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "category_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "category_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "model_year",
+														"type": "Int16",
+														"physicalType": "smallint"
+													},
+													"sink": {
+														"name": "model_year",
+														"type": "Int16",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "list_price",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 2,
+														"precision": 10
+													},
+													"sink": {
+														"name": "list_price",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_bikestores_production_products_sql",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_datalake_production_products_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"FechaProceso": {
+													"value": "@substring(item().FechaProceso, 0, 10)",
+													"type": "Expression"
+												},
+												"Contenedor": {
+													"value": "@item().Contenedor",
+													"type": "Expression"
+												},
+												"MedallaBronce": {
+													"value": "@item().Medalla",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
 					}
 				],
 				"policy": {
@@ -379,6 +577,7 @@
 				"annotations": []
 			},
 			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]",
 				"[concat(variables('factoryId'), '/datasets/ds_bikestores_production_products_sql')]",
 				"[concat(variables('factoryId'), '/datasets/ds_datalake_production_products_parquet')]"
 			]
@@ -390,8 +589,8 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "IngestaDatos",
-						"type": "Copy",
+						"name": "ObtenerParametros",
+						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
 							"timeout": "0.00:10:00",
@@ -404,154 +603,218 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
-								"queryTimeout": "00:25:00",
+								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
+								"queryTimeout": "00:20:00",
+								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
-							"sink": {
-								"type": "ParquetSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "ParquetWriteSettings"
-								}
-							},
-							"enableStaging": false,
-							"parallelCopies": 1,
-							"dataIntegrationUnits": 4,
-							"translator": {
-								"type": "TabularTranslator",
-								"mappings": [
-									{
-										"source": {
-											"name": "customer_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "customer_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "first_name",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "first_name",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "last_name",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "last_name",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "phone",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "phone",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "email",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "email",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "street",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "street",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "city",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "city",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "state",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "state",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "zip_code",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "zip_code",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									}
-								],
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_bikestores_sales_customers_sql",
+							"dataset": {
+								"referenceName": "ds_sql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "RecorrerFechas",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "ObtenerParametros",
+								"dependencyConditions": [
+									"Succeeded"
+								]
 							}
 						],
-						"outputs": [
-							{
-								"referenceName": "ds_datalake_sales_customers_parquet",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('ObtenerParametros').output.value",
+								"type": "Expression"
+							},
+							"batchCount": 5,
+							"activities": [
+								{
+									"name": "IngestaDatos",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:10:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"queryTimeout": "00:20:00",
+											"isolationLevel": "ReadCommitted",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": 1,
+										"dataIntegrationUnits": 4,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "customer_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "customer_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "first_name",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "first_name",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "last_name",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "last_name",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "phone",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "phone",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "email",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "email",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "street",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "street",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "city",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "city",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "state",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "state",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "zip_code",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "zip_code",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_bikestores_sales_customers_sql",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_datalake_sales_customers_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"FechaProceso": {
+													"value": "@substring(item().FechaProceso, 0, 10)",
+													"type": "Expression"
+												},
+												"Contenedor": {
+													"value": "@item().Contenedor",
+													"type": "Expression"
+												},
+												"MedallaBronce": {
+													"value": "@item().Medalla",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
 					}
 				],
 				"policy": {
@@ -563,6 +826,7 @@
 				"annotations": []
 			},
 			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]",
 				"[concat(variables('factoryId'), '/datasets/ds_bikestores_sales_customers_sql')]",
 				"[concat(variables('factoryId'), '/datasets/ds_datalake_sales_customers_parquet')]"
 			]
@@ -574,8 +838,8 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "IngestaDatos",
-						"type": "Copy",
+						"name": "ObtenerParametros",
+						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
 							"timeout": "0.00:10:00",
@@ -588,123 +852,190 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
-								"sqlReaderQuery": "SELECT \n\tA.order_id\n\t,A.item_id\n\t,A.product_id\n\t,A.quantity\n\t,A.list_price\n\t,A.discount\nFROM \n\tsales.order_items AS A \n\tINNER JOIN sales.orders AS B \n\t\tON A.order_id = B.order_id\nWHERE \n\tB.order_date >= CAST(CAST(GETDATE() AS DATE) AS DATETIME)\n\tAND B.order_date < CAST(CAST(DATEADD(DAY, 1, GETDATE()) AS DATE) AS DATETIME)",
-								"queryTimeout": "00:30:00",
+								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
+								"queryTimeout": "00:20:00",
+								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
-							"sink": {
-								"type": "ParquetSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "ParquetWriteSettings"
-								}
-							},
-							"enableStaging": false,
-							"parallelCopies": 1,
-							"dataIntegrationUnits": 4,
-							"translator": {
-								"type": "TabularTranslator",
-								"mappings": [
-									{
-										"source": {
-											"name": "order_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "order_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "item_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "item_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "product_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "product_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "quantity",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "quantity",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "list_price",
-											"type": "Decimal",
-											"physicalType": "decimal",
-											"scale": 2,
-											"precision": 10
-										},
-										"sink": {
-											"name": "list_price",
-											"type": "Decimal",
-											"physicalType": "DECIMAL"
-										}
-									},
-									{
-										"source": {
-											"name": "discount",
-											"type": "Decimal",
-											"physicalType": "decimal",
-											"scale": 2,
-											"precision": 4
-										},
-										"sink": {
-											"name": "discount",
-											"type": "Decimal",
-											"physicalType": "DECIMAL"
-										}
-									}
-								],
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_bikestores_sales_order_items_sql",
+							"dataset": {
+								"referenceName": "ds_sql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "RecorrerFechas",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "ObtenerParametros",
+								"dependencyConditions": [
+									"Succeeded"
+								]
 							}
 						],
-						"outputs": [
-							{
-								"referenceName": "ds_datalake_sales_order_items_parquet",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('ObtenerParametros').output.value",
+								"type": "Expression"
+							},
+							"batchCount": 5,
+							"activities": [
+								{
+									"name": "IngestaDatos",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:10:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderQuery": {
+												"value": "SELECT \r\n\tA.order_id\r\n\t,A.item_id\r\n\t,A.product_id\r\n\t,A.quantity\r\n\t,A.list_price\r\n\t,A.discount\r\nFROM \r\n\tsales.order_items AS A \r\n\tINNER JOIN sales.orders AS B \r\n\t\tON A.order_id = B.order_id\r\nWHERE \r\n\tB.order_date >= CAST('@{item().FechaProceso}' AS DATETIME) \r\n\tAND B.order_date < DATEADD(DAY, 1, CAST('@{item().FechaProceso}' AS DATETIME))\r\n",
+												"type": "Expression"
+											},
+											"queryTimeout": "00:20:00",
+											"isolationLevel": "ReadCommitted",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": 1,
+										"dataIntegrationUnits": 4,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "order_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "order_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "item_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "item_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "product_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "product_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "quantity",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "quantity",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "list_price",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 2,
+														"precision": 10
+													},
+													"sink": {
+														"name": "list_price",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "discount",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 2,
+														"precision": 4
+													},
+													"sink": {
+														"name": "discount",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_bikestores_sales_order_items_sql",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_datalake_sales_order_items_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"FechaProceso": {
+													"value": "@substring(item().FechaProceso, 0, 10)",
+													"type": "Expression"
+												},
+												"Contenedor": {
+													"value": "@item().Contenedor",
+													"type": "Expression"
+												},
+												"MedallaBronce": {
+													"value": "@item().Medalla",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
 					}
 				],
 				"policy": {
@@ -716,6 +1047,7 @@
 				"annotations": []
 			},
 			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]",
 				"[concat(variables('factoryId'), '/datasets/ds_bikestores_sales_order_items_sql')]",
 				"[concat(variables('factoryId'), '/datasets/ds_datalake_sales_order_items_parquet')]"
 			]
@@ -727,8 +1059,8 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "IngestaDatos",
-						"type": "Copy",
+						"name": "ObtenerParametros",
+						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
 							"timeout": "0.00:10:00",
@@ -741,144 +1073,209 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
-								"sqlReaderQuery": "SELECT \n\torder_id\n\t,customer_id\n\t,order_status\n\t,order_date\n\t,required_date\n\t,shipped_date\n\t,store_id\n\t,staff_id\nFROM \n\tsales.orders\nWHERE \n\t(order_date >= CAST(CAST(GETDATE() AS DATE) AS DATETIME) \nAND order_date < CAST(CAST(DATEADD(DAY, 1, GETDATE()) AS DATE) AS DATETIME))\nOR\n(\n\tshipped_date = CAST(GETDATE() AS DATE)\n)",
-								"queryTimeout": "00:30:00",
-								"isolationLevel": "ReadCommitted",
+								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
+								"queryTimeout": "00:20:00",
 								"partitionOption": "None"
 							},
-							"sink": {
-								"type": "ParquetSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "ParquetWriteSettings"
-								}
-							},
-							"enableStaging": false,
-							"parallelCopies": 1,
-							"dataIntegrationUnits": 4,
-							"translator": {
-								"type": "TabularTranslator",
-								"mappings": [
-									{
-										"source": {
-											"name": "order_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "order_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "customer_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "customer_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "order_status",
-											"type": "Byte",
-											"physicalType": "tinyint"
-										},
-										"sink": {
-											"name": "order_status",
-											"type": "Byte",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "order_date",
-											"type": "DateTime",
-											"physicalType": "datetime"
-										},
-										"sink": {
-											"name": "order_date",
-											"type": "DateTime",
-											"physicalType": "INT_96"
-										}
-									},
-									{
-										"source": {
-											"name": "required_date",
-											"type": "DateTime",
-											"physicalType": "date"
-										},
-										"sink": {
-											"name": "required_date",
-											"type": "DateTime",
-											"physicalType": "INT_96"
-										}
-									},
-									{
-										"source": {
-											"name": "shipped_date",
-											"type": "DateTime",
-											"physicalType": "date"
-										},
-										"sink": {
-											"name": "shipped_date",
-											"type": "DateTime",
-											"physicalType": "INT_96"
-										}
-									},
-									{
-										"source": {
-											"name": "store_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "store_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "staff_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "staff_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									}
-								],
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_bikestores_sales_orders_sql",
+							"dataset": {
+								"referenceName": "ds_sql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "RecorrerFechas",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "ObtenerParametros",
+								"dependencyConditions": [
+									"Succeeded"
+								]
 							}
 						],
-						"outputs": [
-							{
-								"referenceName": "ds_datalake_sales_orders_parquet",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('ObtenerParametros').output.value",
+								"type": "Expression"
+							},
+							"batchCount": 5,
+							"activities": [
+								{
+									"name": "IngestaDatos",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:10:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"sqlReaderQuery": {
+												"value": "SELECT \r\n\torder_id\r\n\t,customer_id\r\n\t,order_status\r\n\t,order_date\r\n\t,required_date\r\n\t,shipped_date\r\n\t,store_id\r\n\t,staff_id\r\nFROM \r\n\tsales.orders\r\nWHERE \r\n\torder_date >= CAST('@{item().FechaProceso}' AS DATETIME) \r\n\tAND order_date < DATEADD(DAY, 1, CAST('@{item().FechaProceso}' AS DATETIME))",
+												"type": "Expression"
+											},
+											"queryTimeout": "00:20:00",
+											"isolationLevel": "ReadCommitted",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": 1,
+										"dataIntegrationUnits": 4,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "order_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "order_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "customer_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "customer_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "order_status",
+														"type": "Byte",
+														"physicalType": "tinyint"
+													},
+													"sink": {
+														"name": "order_status",
+														"type": "Byte",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "order_date",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "order_date",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "required_date",
+														"type": "DateTime",
+														"physicalType": "date"
+													},
+													"sink": {
+														"name": "required_date",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "shipped_date",
+														"type": "DateTime",
+														"physicalType": "date"
+													},
+													"sink": {
+														"name": "shipped_date",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "store_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "store_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "staff_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "staff_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_bikestores_sales_orders_sql",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_datalake_sales_orders_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"FechaProceso": {
+													"value": "@substring(item().FechaProceso, 0, 10)",
+													"type": "Expression"
+												},
+												"Contenedor": {
+													"value": "@item().Contenedor",
+													"type": "Expression"
+												},
+												"MedallaBronce": {
+													"value": "@item().Medalla",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
 					}
 				],
 				"policy": {
@@ -890,6 +1287,7 @@
 				"annotations": []
 			},
 			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]",
 				"[concat(variables('factoryId'), '/datasets/ds_bikestores_sales_orders_sql')]",
 				"[concat(variables('factoryId'), '/datasets/ds_datalake_sales_orders_parquet')]"
 			]
@@ -901,8 +1299,8 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "IngestaDatos",
-						"type": "Copy",
+						"name": "ObtenerParametros",
+						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
 							"timeout": "0.00:10:00",
@@ -915,142 +1313,206 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
-								"queryTimeout": "00:25:00",
+								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
+								"queryTimeout": "00:20:00",
+								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
-							"sink": {
-								"type": "ParquetSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "ParquetWriteSettings"
-								}
-							},
-							"enableStaging": false,
-							"parallelCopies": 1,
-							"dataIntegrationUnits": 4,
-							"translator": {
-								"type": "TabularTranslator",
-								"mappings": [
-									{
-										"source": {
-											"name": "staff_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "staff_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "first_name",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "first_name",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "last_name",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "last_name",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "email",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "email",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "phone",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "phone",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "active",
-											"type": "Byte",
-											"physicalType": "tinyint"
-										},
-										"sink": {
-											"name": "active",
-											"type": "Byte",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "store_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "store_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "manager_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "manager_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									}
-								],
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_bikestores_sales_staffs_sql",
+							"dataset": {
+								"referenceName": "ds_sql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "RecorrerFechas",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "ObtenerParametros",
+								"dependencyConditions": [
+									"Succeeded"
+								]
 							}
 						],
-						"outputs": [
-							{
-								"referenceName": "ds_datalake_sales_staffs_parquet",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('ObtenerParametros').output.value",
+								"type": "Expression"
+							},
+							"batchCount": 5,
+							"activities": [
+								{
+									"name": "IngestaDatos",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:10:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"queryTimeout": "00:20:00",
+											"isolationLevel": "ReadCommitted",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": 1,
+										"dataIntegrationUnits": 4,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "staff_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "staff_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "first_name",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "first_name",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "last_name",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "last_name",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "email",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "email",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "phone",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "phone",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "active",
+														"type": "Byte",
+														"physicalType": "tinyint"
+													},
+													"sink": {
+														"name": "active",
+														"type": "Byte",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "store_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "store_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "manager_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "manager_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_bikestores_sales_staffs_sql",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_datalake_sales_staffs_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"FechaProceso": {
+													"value": "@substring(item().FechaProceso, 0, 10)",
+													"type": "Expression"
+												},
+												"Contenedor": {
+													"value": "@item().Contenedor",
+													"type": "Expression"
+												},
+												"MedallaBronce": {
+													"value": "@item().Medalla",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
 					}
 				],
 				"policy": {
@@ -1062,6 +1524,7 @@
 				"annotations": []
 			},
 			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]",
 				"[concat(variables('factoryId'), '/datasets/ds_bikestores_sales_staffs_sql')]",
 				"[concat(variables('factoryId'), '/datasets/ds_datalake_sales_staffs_parquet')]"
 			]
@@ -1073,8 +1536,8 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "IngestaDatos",
-						"type": "Copy",
+						"name": "ObtenerParametros",
+						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
 							"timeout": "0.00:10:00",
@@ -1087,143 +1550,206 @@
 						"typeProperties": {
 							"source": {
 								"type": "SqlServerSource",
-								"queryTimeout": "00:25:00",
+								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
+								"queryTimeout": "00:20:00",
 								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
-							"sink": {
-								"type": "ParquetSink",
-								"storeSettings": {
-									"type": "AzureBlobFSWriteSettings"
-								},
-								"formatSettings": {
-									"type": "ParquetWriteSettings"
-								}
-							},
-							"enableStaging": false,
-							"parallelCopies": 1,
-							"dataIntegrationUnits": 4,
-							"translator": {
-								"type": "TabularTranslator",
-								"mappings": [
-									{
-										"source": {
-											"name": "store_id",
-											"type": "Int32",
-											"physicalType": "int"
-										},
-										"sink": {
-											"name": "store_id",
-											"type": "Int32",
-											"physicalType": "INT_32"
-										}
-									},
-									{
-										"source": {
-											"name": "store_name",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "store_name",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "phone",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "phone",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "email",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "email",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "street",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "street",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "city",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "city",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "state",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "state",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									},
-									{
-										"source": {
-											"name": "zip_code",
-											"type": "String",
-											"physicalType": "varchar"
-										},
-										"sink": {
-											"name": "zip_code",
-											"type": "String",
-											"physicalType": "UTF8"
-										}
-									}
-								],
-								"typeConversion": true,
-								"typeConversionSettings": {
-									"allowDataTruncation": true,
-									"treatBooleanAsNumber": false
-								}
-							}
-						},
-						"inputs": [
-							{
-								"referenceName": "ds_bikestores_sales_stores_sql",
+							"dataset": {
+								"referenceName": "ds_sql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "RecorrerFechas",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "ObtenerParametros",
+								"dependencyConditions": [
+									"Succeeded"
+								]
 							}
 						],
-						"outputs": [
-							{
-								"referenceName": "ds_datalake_sales_stores_parquet",
-								"type": "DatasetReference",
-								"parameters": {}
-							}
-						]
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('ObtenerParametros').output.value",
+								"type": "Expression"
+							},
+							"batchCount": 5,
+							"activities": [
+								{
+									"name": "IngestaDatos",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:10:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"queryTimeout": "00:20:00",
+											"isolationLevel": "ReadCommitted",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": 1,
+										"dataIntegrationUnits": 4,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "store_id",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "store_id",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "store_name",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "store_name",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "phone",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "phone",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "email",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "email",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "street",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "street",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "city",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "city",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "state",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "state",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "zip_code",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "zip_code",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_bikestores_sales_stores_sql",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_datalake_sales_stores_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"FechaProceso": {
+													"value": "@substring(item().FechaProceso, 0, 10)",
+													"type": "Expression"
+												},
+												"Contenedor": {
+													"value": "@item().Contenedor",
+													"type": "Expression"
+												},
+												"MedallaBronce": {
+													"value": "@item().Medalla",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
 					}
 				],
 				"policy": {
@@ -1235,119 +1761,9 @@
 				"annotations": []
 			},
 			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]",
 				"[concat(variables('factoryId'), '/datasets/ds_bikestores_sales_stores_sql')]",
 				"[concat(variables('factoryId'), '/datasets/ds_datalake_sales_stores_parquet')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pl_orquestador_bronce')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "pl_bikestore_sales_orders_parquet",
-						"type": "ExecutePipeline",
-						"dependsOn": [],
-						"policy": {
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"pipeline": {
-								"referenceName": "pl_bikestore_sales_orders_daily",
-								"type": "PipelineReference"
-							},
-							"waitOnCompletion": true,
-							"parameters": {}
-						}
-					},
-					{
-						"name": "pl_bikestore_sales_order_items_parquet",
-						"type": "ExecutePipeline",
-						"dependsOn": [
-							{
-								"activity": "pl_bikestore_sales_orders_parquet",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"pipeline": {
-								"referenceName": "pl_bikestore_sales_order_items_daily",
-								"type": "PipelineReference"
-							},
-							"waitOnCompletion": true,
-							"parameters": {}
-						}
-					},
-					{
-						"name": "pl_bikestore_production_products_daily",
-						"type": "ExecutePipeline",
-						"dependsOn": [
-							{
-								"activity": "pl_bikestore_sales_order_items_parquet",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"pipeline": {
-								"referenceName": "pl_bikestore_production_products_daily",
-								"type": "PipelineReference"
-							},
-							"waitOnCompletion": true,
-							"parameters": {}
-						}
-					},
-					{
-						"name": "pl_bikestore_sales_customers_daily",
-						"type": "ExecutePipeline",
-						"dependsOn": [
-							{
-								"activity": "pl_bikestore_production_products_daily",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"pipeline": {
-								"referenceName": "pl_bikestore_sales_customers_daily",
-								"type": "PipelineReference"
-							},
-							"waitOnCompletion": true,
-							"parameters": {}
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"folder": {
-					"name": "Bronze/orchestrator"
-				},
-				"annotations": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_sales_orders_daily')]",
-				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_sales_order_items_daily')]",
-				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_production_products_daily')]",
-				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_sales_customers_daily')]"
 			]
 		},
 		{
@@ -1784,6 +2200,20 @@
 					"referenceName": "ls_stacownlab30_datalake",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"FechaProceso": {
+						"type": "string",
+						"defaultValue": "1800-01-01"
+					},
+					"Contenedor": {
+						"type": "string",
+						"defaultValue": "reg"
+					},
+					"MedallaBronce": {
+						"type": "string",
+						"defaultValue": "bronze"
+					}
+				},
 				"folder": {
 					"name": "Datalake"
 				},
@@ -1793,14 +2223,17 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('production_brands_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('brands_', replace(dataset().FechaProceso, '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/production/brands/', substring(addhours(utcnow(), -6), 0, 4))",
+							"value": "@concat(dataset().MedallaBronce, '/devvertixddnsnet/bikestores/production/brands/año=', substring(dataset().FechaProceso, 0, 4), '/mes=', substring(dataset().FechaProceso, 5, 2), '/dia=', substring(dataset().FechaProceso, 8, 2), '/')",
 							"type": "Expression"
 						},
-						"fileSystem": "datalake"
+						"fileSystem": {
+							"value": "@dataset().Contenedor",
+							"type": "Expression"
+						}
 					},
 					"compressionCodec": "snappy"
 				},
@@ -1819,6 +2252,20 @@
 					"referenceName": "ls_stacownlab30_datalake",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"FechaProceso": {
+						"type": "string",
+						"defaultValue": "1800-01-01"
+					},
+					"Contenedor": {
+						"type": "string",
+						"defaultValue": "reg"
+					},
+					"MedallaBronce": {
+						"type": "string",
+						"defaultValue": "bronze"
+					}
+				},
 				"folder": {
 					"name": "Datalake"
 				},
@@ -1828,14 +2275,17 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('production_categories_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('categories_',replace(dataset().FechaProceso, '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/production/categories/', substring(addhours(utcnow(), -6), 0, 4))",
+							"value": "@concat(dataset().MedallaBronce,'/devvertixddnsnet/bikestores/production/categories/año=', substring(dataset().FechaProceso, 0, 4), '/mes=', substring(dataset().FechaProceso, 5, 2), '/dia=', substring(dataset().FechaProceso, 8, 2), '/')",
 							"type": "Expression"
 						},
-						"fileSystem": "datalake"
+						"fileSystem": {
+							"value": "@dataset().Contenedor",
+							"type": "Expression"
+						}
 					},
 					"compressionCodec": "snappy"
 				},
@@ -1854,6 +2304,20 @@
 					"referenceName": "ls_stacownlab30_datalake",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"FechaProceso": {
+						"type": "string",
+						"defaultValue": "1900-01-01"
+					},
+					"Contenedor": {
+						"type": "string",
+						"defaultValue": "reg"
+					},
+					"MedallaBronce": {
+						"type": "string",
+						"defaultValue": "bronze"
+					}
+				},
 				"folder": {
 					"name": "Datalake"
 				},
@@ -1863,14 +2327,17 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('production_products_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('products_',replace(dataset().FechaProceso, '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/production/products/', substring(addhours(utcnow(), -6), 0, 4))",
+							"value": "@concat(dataset().MedallaBronce, '/devvertixddnsnet/bikestores/production/products/año=', substring(dataset().FechaProceso, 0, 4),'/mes=', substring(dataset().FechaProceso, 5, 2), '/dia=', substring(dataset().FechaProceso, 8, 2), '/')",
 							"type": "Expression"
 						},
-						"fileSystem": "datalake"
+						"fileSystem": {
+							"value": "@dataset().Contenedor",
+							"type": "Expression"
+						}
 					},
 					"compressionCodec": "snappy"
 				},
@@ -1889,6 +2356,20 @@
 					"referenceName": "ls_stacownlab30_datalake",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"FechaProceso": {
+						"type": "string",
+						"defaultValue": "1800-01-01"
+					},
+					"Contenedor": {
+						"type": "string",
+						"defaultValue": "reg"
+					},
+					"MedallaBronce": {
+						"type": "string",
+						"defaultValue": "bronze"
+					}
+				},
 				"folder": {
 					"name": "Datalake"
 				},
@@ -1898,14 +2379,17 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('sales_customers_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('customers_',replace(dataset().FechaProceso, '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/customers/', substring(addhours(utcnow(), -6), 0, 4))",
+							"value": "@concat(dataset().MedallaBronce,'/devvertixddnsnet/bikestores/sales/customers/año=', substring(dataset().FechaProceso, 0, 4), '/mes=', substring(dataset().FechaProceso, 5, 2), '/dia=',substring(dataset().FechaProceso, 8, 2),'/')",
 							"type": "Expression"
 						},
-						"fileSystem": "datalake"
+						"fileSystem": {
+							"value": "@dataset().Contenedor",
+							"type": "Expression"
+						}
 					},
 					"compressionCodec": "snappy"
 				},
@@ -1924,6 +2408,20 @@
 					"referenceName": "ls_stacownlab30_datalake",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"FechaProceso": {
+						"type": "string",
+						"defaultValue": "1800-01-01"
+					},
+					"Contenedor": {
+						"type": "string",
+						"defaultValue": "reg"
+					},
+					"MedallaBronce": {
+						"type": "string",
+						"defaultValue": "bronze"
+					}
+				},
 				"folder": {
 					"name": "Datalake"
 				},
@@ -1933,14 +2431,17 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('sales_order_items_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('order_items_',replace(dataset().FechaProceso, '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/order_items/', substring(addhours(utcnow(), -6), 0, 4))",
+							"value": "@concat(dataset().MedallaBronce,'/devvertixddnsnet/bikestores/sales/order_items/año=', substring(dataset().FechaProceso, 0, 4), '/mes=', substring(dataset().FechaProceso, 5, 2), '/dia=', substring(dataset().FechaProceso, 8, 2), '/')",
 							"type": "Expression"
 						},
-						"fileSystem": "datalake"
+						"fileSystem": {
+							"value": "@dataset().Contenedor",
+							"type": "Expression"
+						}
 					},
 					"compressionCodec": "snappy"
 				},
@@ -1959,6 +2460,20 @@
 					"referenceName": "ls_stacownlab30_datalake",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"FechaProceso": {
+						"type": "string",
+						"defaultValue": "1800-01-01"
+					},
+					"Contenedor": {
+						"type": "string",
+						"defaultValue": "reg"
+					},
+					"MedallaBronce": {
+						"type": "string",
+						"defaultValue": "bronze"
+					}
+				},
 				"folder": {
 					"name": "Datalake"
 				},
@@ -1968,14 +2483,17 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('sales_orders_', replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''), '.parquet')",
+							"value": "@concat('orders_', replace(dataset().FechaProceso, '-', ''), '.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/orders/', substring(addhours(utcnow(), -6), 0, 4))",
+							"value": "@concat(dataset().MedallaBronce,'/devvertixddnsnet/bikestores/sales/orders/año=', substring(dataset().FechaProceso, 0, 4), '/mes=',substring(dataset().FechaProceso, 5, 2), '/dia=', substring(dataset().FechaProceso, 8, 2), '/')",
 							"type": "Expression"
 						},
-						"fileSystem": "datalake"
+						"fileSystem": {
+							"value": "@dataset().Contenedor",
+							"type": "Expression"
+						}
 					},
 					"compressionCodec": "snappy"
 				},
@@ -1994,6 +2512,20 @@
 					"referenceName": "ls_stacownlab30_datalake",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"FechaProceso": {
+						"type": "string",
+						"defaultValue": "1800-01-01"
+					},
+					"Contenedor": {
+						"type": "string",
+						"defaultValue": "reg"
+					},
+					"MedallaBronce": {
+						"type": "string",
+						"defaultValue": "bronze"
+					}
+				},
 				"folder": {
 					"name": "Datalake"
 				},
@@ -2003,14 +2535,17 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('sales_staffs_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('staffs_',replace(dataset().FechaProceso, '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/staffs/', substring(addhours(utcnow(), -6), 0, 4))",
+							"value": "@concat(dataset().MedallaBronce,'/devvertixddnsnet/bikestores/sales/staffs/año=', substring(dataset().FechaProceso, 0, 4), '/mes=', substring(dataset().FechaProceso, 5, 2), '/dia=', substring(dataset().FechaProceso, 8, 2), '/')",
 							"type": "Expression"
 						},
-						"fileSystem": "datalake"
+						"fileSystem": {
+							"value": "@dataset().Contenedor",
+							"type": "Expression"
+						}
 					},
 					"compressionCodec": "snappy"
 				},
@@ -2029,6 +2564,20 @@
 					"referenceName": "ls_stacownlab30_datalake",
 					"type": "LinkedServiceReference"
 				},
+				"parameters": {
+					"FechaProceso": {
+						"type": "string",
+						"defaultValue": "1800-01-01"
+					},
+					"Contenedor": {
+						"type": "string",
+						"defaultValue": "reg"
+					},
+					"MedallaBronce": {
+						"type": "string",
+						"defaultValue": "bronze"
+					}
+				},
 				"folder": {
 					"name": "Datalake"
 				},
@@ -2038,14 +2587,17 @@
 					"location": {
 						"type": "AzureBlobFSLocation",
 						"fileName": {
-							"value": "@concat('sales_stores_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
+							"value": "@concat('stores_',replace(dataset().FechaProceso, '-', ''),'.parquet')",
 							"type": "Expression"
 						},
 						"folderPath": {
-							"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/stores/', substring(addhours(utcnow(), -6), 0, 4))",
+							"value": "@concat(dataset().MedallaBronce,'/devvertixddnsnet/bikestores/sales/stores/año=', substring(dataset().FechaProceso, 0, 4), '/mes=', substring(dataset().FechaProceso, 5, 2), '/dia=', substring(dataset().FechaProceso, 8, 2), '/')",
 							"type": "Expression"
 						},
-						"fileSystem": "datalake"
+						"fileSystem": {
+							"value": "@dataset().Contenedor",
+							"type": "Expression"
+						}
 					},
 					"compressionCodec": "snappy"
 				},
@@ -2053,6 +2605,44 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_stacownlab30_datalake')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_sql_configuracion_parametros')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_source_devvertixddnsnet_Configuracion",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Datalake"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "Codigo",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "Clave",
+						"type": "varchar"
+					},
+					{
+						"name": "Valor",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "Parametros"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_source_devvertixddnsnet_Configuracion')]"
 			]
 		},
 		{
@@ -2097,6 +2687,29 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/ls_source_devvertixddnsnet_Configuracion')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Servidor SQL Server devvertix.ddns.net, base de datos configuracion",
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "ls_kevaownlab30",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "[parameters('ls_source_devvertixddnsnet_Configuracion_properties_typeProperties_connectionString_secretName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_kevaownlab30')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ls_stacownlab30_datalake')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
@@ -2129,7 +2742,56 @@
 				"pipelines": [
 					{
 						"pipelineReference": {
-							"referenceName": "pl_orquestador_bronce",
+							"referenceName": "pl_bikestore_production_brands",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_bikestore_production_categories",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_bikestore_production_products_daily",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_bikestore_sales_customers_daily",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_bikestore_sales_order_items_daily",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_bikestore_sales_orders_daily",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_bikestore_sales_staffs",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					},
+					{
+						"pipelineReference": {
+							"referenceName": "pl_bikestore_sales_stores",
 							"type": "PipelineReference"
 						},
 						"parameters": {}
@@ -2140,8 +2802,7 @@
 					"recurrence": {
 						"frequency": "Day",
 						"interval": 1,
-						"startTime": "2024-08-05T06:42:00",
-						"endTime": "2024-10-01T18:45:00",
+						"startTime": "2024-11-10T16:00:00",
 						"timeZone": "Central America Standard Time",
 						"schedule": {
 							"minutes": [
@@ -2155,7 +2816,14 @@
 				}
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/pl_orquestador_bronce')]"
+				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_production_brands')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_production_categories')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_production_products_daily')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_sales_customers_daily')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_sales_order_items_daily')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_sales_orders_daily')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_sales_staffs')]",
+				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_sales_stores')]"
 			]
 		}
 	]

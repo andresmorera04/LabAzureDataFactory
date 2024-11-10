@@ -17,6 +17,9 @@
 		"ls_source_devvertixddnsnet_BikeStores_properties_typeProperties_userName": {
 			"value": "integrator"
 		},
+		"ls_source_devvertixddnsnet_Configuracion_properties_typeProperties_connectionString_secretName": {
+			"value": "secrdevvertixddnsnetstringconn"
+		},
 		"ls_stacownlab30_datalake_properties_typeProperties_url": {
 			"value": "https://stacownlab30.dfs.core.windows.net"
 		}
