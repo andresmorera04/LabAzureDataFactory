@@ -128,7 +128,7 @@
 									"type": "DatasetReference",
 									"parameters": {
 										"FechaProceso": {
-											"value": "@item().FechaProceso",
+											"value": "@substring(item().FechaProceso, 0, 10)",
 											"type": "Expression"
 										},
 										"Contenedor": {
