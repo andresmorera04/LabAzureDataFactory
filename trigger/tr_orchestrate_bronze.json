@@ -15,6 +15,12 @@
 					"referenceName": "pl_bikestore_production_categories",
 					"type": "PipelineReference"
 				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "pl_bikestore_production_products_daily",
+					"type": "PipelineReference"
+				}
 			}
 		],
 		"type": "ScheduleTrigger",
