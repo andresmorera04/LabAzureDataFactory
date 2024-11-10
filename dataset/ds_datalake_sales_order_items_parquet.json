@@ -5,6 +5,20 @@
 			"referenceName": "ls_stacownlab30_datalake",
 			"type": "LinkedServiceReference"
 		},
+		"parameters": {
+			"FechaProceso": {
+				"type": "string",
+				"defaultValue": "1800-01-01"
+			},
+			"Contenedor": {
+				"type": "string",
+				"defaultValue": "reg"
+			},
+			"MedallaBronce": {
+				"type": "string",
+				"defaultValue": "bronze"
+			}
+		},
 		"folder": {
 			"name": "Datalake"
 		},
@@ -14,14 +28,17 @@
 			"location": {
 				"type": "AzureBlobFSLocation",
 				"fileName": {
-					"value": "@concat('sales_order_items_',replace(substring(addhours(utcnow(), -6), 0, 10), '-', ''),'.parquet')",
+					"value": "@concat('order_items_',replace(dataset().FechaProceso, '-', ''),'.parquet')",
 					"type": "Expression"
 				},
 				"folderPath": {
-					"value": "@concat('Bronze/devvertixddnsnet/bikestores/sales/order_items/', substring(addhours(utcnow(), -6), 0, 4))",
+					"value": "@concat(dataset().MedallaBronce,'/devvertixddnsnet/bikestores/sales/order_items/año=', substring(dataset().FechaProceso, 0, 4), '/mes=', substring(dataset().FechaProceso, 5, 2), '/dia=', substring(dataset().FechaProceso, 8, 2), '/')",
 					"type": "Expression"
 				},
-				"fileSystem": "datalake"
+				"fileSystem": {
+					"value": "@dataset().Contenedor",
+					"type": "Expression"
+				}
 			},
 			"compressionCodec": "snappy"
 		},

@@ -6,7 +6,49 @@
 		"pipelines": [
 			{
 				"pipelineReference": {
-					"referenceName": "pl_orquestador_bronce",
+					"referenceName": "pl_bikestore_production_brands",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "pl_bikestore_production_categories",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "pl_bikestore_production_products_daily",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "pl_bikestore_sales_customers_daily",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "pl_bikestore_sales_order_items_daily",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "pl_bikestore_sales_orders_daily",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "pl_bikestore_sales_staffs",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "pl_bikestore_sales_stores",
 					"type": "PipelineReference"
 				}
 			}
@@ -16,8 +58,7 @@
 			"recurrence": {
 				"frequency": "Day",
 				"interval": 1,
-				"startTime": "2024-08-05T06:42:00",
-				"endTime": "2024-10-01T18:45:00",
+				"startTime": "2024-11-10T16:00:00",
 				"timeZone": "Central America Standard Time",
 				"schedule": {
 					"minutes": [
