@@ -1,0 +1,9 @@
+{
+	"name": "dafapdownlab30",
+	"location": "eastus2",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "9145cc3b-2231-4b02-b6a4-fbea23fb9f0e",
+		"tenantId": "dc97c956-e32d-4ca4-a19e-31faf0bb93d2"
+	}
+}
