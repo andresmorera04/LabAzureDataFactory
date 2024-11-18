@@ -1,6 +1,12 @@
 {
 	"name": "ls_source_devvertixddnsnet_BikeStores",
 	"properties": {
+		"parameters": {
+			"UrlKeyVault": {
+				"type": "string",
+				"defaultValue": "https://kevaownlab30.vault.azure.net/"
+			}
+		},
 		"annotations": [],
 		"type": "SqlServer",
 		"typeProperties": {
@@ -14,7 +20,13 @@
 				"type": "AzureKeyVaultSecret",
 				"store": {
 					"referenceName": "ls_kevaownlab30",
-					"type": "LinkedServiceReference"
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"UrlKeyVault": {
+							"value": "@linkedService().UrlKeyVault",
+							"type": "Expression"
+						}
+					}
 				},
 				"secretName": "secrdevvertixddnsnetbikestores"
 			}
