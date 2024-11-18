@@ -3,7 +3,17 @@
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "ls_stacownlab30_datalake",
-			"type": "LinkedServiceReference"
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"UrlKeyVault": {
+					"value": "@dataset().UrlKeyVault",
+					"type": "Expression"
+				},
+				"UrlDataLake": {
+					"value": "@dataset().UrlDataLake",
+					"type": "Expression"
+				}
+			}
 		},
 		"parameters": {
 			"FechaProceso": {
@@ -17,6 +27,14 @@
 			"MedallaBronce": {
 				"type": "string",
 				"defaultValue": "bronze"
+			},
+			"UrlKeyVault": {
+				"type": "string",
+				"defaultValue": "https://kevaownlab30.vault.azure.net/"
+			},
+			"UrlDataLake": {
+				"type": "string",
+				"defaultValue": "https://stacownlab30.dfs.core.windows.net"
 			}
 		},
 		"folder": {
