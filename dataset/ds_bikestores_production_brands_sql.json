@@ -3,7 +3,19 @@
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "ls_source_devvertixddnsnet_BikeStores",
-			"type": "LinkedServiceReference"
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"UrlKeyVault": {
+					"value": "@dataset().UrlKeyVault",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"UrlKeyVault": {
+				"type": "string",
+				"defaultValue": "https://kevaownlab30.vault.azure.net/"
+			}
 		},
 		"folder": {
 			"name": "Sources/devvertixddnsnet"
