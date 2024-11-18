@@ -62,7 +62,10 @@
 							"typeProperties": {
 								"source": {
 									"type": "SqlServerSource",
-									"sqlReaderQuery": "SELECT \r\n\torder_id\r\n\t,customer_id\r\n\t,order_status\r\n\t,order_date\r\n\t,required_date\r\n\t,shipped_date\r\n\t,store_id\r\n\t,staff_id\r\nFROM \r\n\tsales.orders\r\nWHERE \r\n\torder_date >= CAST('@{item().FechaProceso}' AS DATETIME) \r\n\tAND order_date < DATEADD(DAY, 1, CAST('@{item().FechaProceso}' AS DATETIME))",
+									"sqlReaderQuery": {
+										"value": "SELECT \r\n\torder_id\r\n\t,customer_id\r\n\t,order_status\r\n\t,order_date\r\n\t,required_date\r\n\t,shipped_date\r\n\t,store_id\r\n\t,staff_id\r\nFROM \r\n\tsales.orders\r\nWHERE \r\n\torder_date >= CAST('@{item().FechaProceso}' AS DATETIME) \r\n\tAND order_date < DATEADD(DAY, 1, CAST('@{item().FechaProceso}' AS DATETIME))",
+										"type": "Expression"
+									},
 									"queryTimeout": "00:20:00",
 									"isolationLevel": "ReadCommitted",
 									"partitionOption": "None"

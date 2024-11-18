@@ -63,7 +63,10 @@
 							"typeProperties": {
 								"source": {
 									"type": "SqlServerSource",
-									"sqlReaderQuery": "SELECT \r\n\tA.order_id\r\n\t,A.item_id\r\n\t,A.product_id\r\n\t,A.quantity\r\n\t,A.list_price\r\n\t,A.discount\r\nFROM \r\n\tsales.order_items AS A \r\n\tINNER JOIN sales.orders AS B \r\n\t\tON A.order_id = B.order_id\r\nWHERE \r\n\tB.order_date >= CAST('@{item().FechaProceso}' AS DATETIME) \r\n\tAND B.order_date < DATEADD(DAY, 1, CAST('@{item().FechaProceso}' AS DATETIME))\r\n",
+									"sqlReaderQuery": {
+										"value": "SELECT \r\n\tA.order_id\r\n\t,A.item_id\r\n\t,A.product_id\r\n\t,A.quantity\r\n\t,A.list_price\r\n\t,A.discount\r\nFROM \r\n\tsales.order_items AS A \r\n\tINNER JOIN sales.orders AS B \r\n\t\tON A.order_id = B.order_id\r\nWHERE \r\n\tB.order_date >= CAST('@{item().FechaProceso}' AS DATETIME) \r\n\tAND B.order_date < DATEADD(DAY, 1, CAST('@{item().FechaProceso}' AS DATETIME))\r\n",
+										"type": "Expression"
+									},
 									"queryTimeout": "00:20:00",
 									"isolationLevel": "ReadCommitted",
 									"partitionOption": "None"
