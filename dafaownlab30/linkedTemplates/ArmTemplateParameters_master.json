@@ -6,7 +6,7 @@
 			"value": "dafaownlab30"
 		},
 		"ls_kevaownlab30_properties_typeProperties_baseUrl": {
-			"value": "https://kevaownlab30.vault.azure.net/"
+			"value": "@{linkedService().UrlKeyVault}"
 		},
 		"ls_source_devvertixddnsnet_BikeStores_properties_typeProperties_server": {
 			"value": "devvertix.ddns.net,5722"

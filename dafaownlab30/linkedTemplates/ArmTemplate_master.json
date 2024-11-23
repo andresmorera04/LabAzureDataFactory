@@ -9,7 +9,7 @@
 		},
 		"ls_kevaownlab30_properties_typeProperties_baseUrl": {
 			"type": "string",
-			"defaultValue": "https://kevaownlab30.vault.azure.net/"
+			"defaultValue": "@{linkedService().UrlKeyVault}"
 		},
 		"ls_source_devvertixddnsnet_BikeStores_properties_typeProperties_server": {
 			"type": "string",
