@@ -79,7 +79,27 @@
 								},
 								"enableStaging": false,
 								"parallelCopies": 1,
-								"validateDataConsistency": false,
+								"validateDataConsistency": true,
+								"logSettings": {
+									"enableCopyActivityLog": true,
+									"copyActivityLogSettings": {
+										"logLevel": "Warning",
+										"enableReliableLogging": false
+									},
+									"logLocationSettings": {
+										"linkedServiceName": {
+											"referenceName": "ls_stacownlab30_datalake",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"UrlDataLake": "https://stacownlab30.dfs.core.windows.net"
+											}
+										},
+										"path": {
+											"value": "@concat(item().Contenedor, '/', item().Medalla, '/logs_datafactory/')",
+											"type": "Expression"
+										}
+									}
+								},
 								"dataIntegrationUnits": 4,
 								"translator": {
 									"type": "TabularTranslator",
