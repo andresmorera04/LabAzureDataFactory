@@ -2898,7 +2898,7 @@
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"annotations": [],
-				"runtimeState": "Started",
+				"runtimeState": "Stopped",
 				"pipelines": [
 					{
 						"pipelineReference": {
@@ -2966,10 +2966,10 @@
 						"timeZone": "Central America Standard Time",
 						"schedule": {
 							"minutes": [
-								18
+								0
 							],
 							"hours": [
-								14
+								18
 							]
 						}
 					}
@@ -2984,6 +2984,45 @@
 				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_sales_orders_daily')]",
 				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_sales_staffs')]",
 				"[concat(variables('factoryId'), '/pipelines/pl_bikestore_sales_stores')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/tr_configuracion_parametros')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Trigger que se ejecuta diariamente para cambiar los valores de la tabla parametros",
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pl_DiaSiguiente_Parametro_FechaProceso",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-11-24T20:19:00",
+						"timeZone": "Central America Standard Time",
+						"schedule": {
+							"minutes": [
+								0
+							],
+							"hours": [
+								1
+							]
+						}
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pl_DiaSiguiente_Parametro_FechaProceso')]"
 			]
 		}
 	]
