@@ -1,0 +1,42 @@
+{
+	"name": "ds_azuresql_configuracion_parametros",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_azuresql_configuracion",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"nombreEsquema": {
+				"type": "string",
+				"defaultValue": "CONFIGURACION_DEV"
+			}
+		},
+		"folder": {
+			"name": "Configuracion"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "Codigo",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Clave",
+				"type": "varchar"
+			},
+			{
+				"name": "Valor",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().nombreEsquema",
+				"type": "Expression"
+			},
+			"table": "Parametros"
+		}
+	}
+}
