@@ -1,15 +1,15 @@
 {
-	"name": "ds_sql_configuracion_parametros",
+	"name": "ds_azuresql_configuracion_parametros",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "ls_source_devvertixddnsnet_Configuracion",
+			"referenceName": "ls_azuresql_configuracion",
 			"type": "LinkedServiceReference"
 		},
 		"folder": {
-			"name": "Datalake"
+			"name": "Configuracion"
 		},
 		"annotations": [],
-		"type": "SqlServerTable",
+		"type": "AzureSqlTable",
 		"schema": [
 			{
 				"name": "Codigo",

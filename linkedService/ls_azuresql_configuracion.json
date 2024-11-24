@@ -1,17 +1,11 @@
 {
-	"name": "ls_stacownlab30_datalake",
+	"name": "ls_azuresql_configuracion",
 	"properties": {
-		"parameters": {
-			"UrlDataLake": {
-				"type": "string",
-				"defaultValue": "https://stacownlab30.dfs.core.windows.net"
-			}
-		},
+		"description": "Base de Datos para Configuracion de Azure SQL",
 		"annotations": [],
-		"type": "AzureBlobFS",
+		"type": "AzureSqlDatabase",
 		"typeProperties": {
-			"url": "@{linkedService().UrlDataLake}",
-			"accountKey": {
+			"connectionString": {
 				"type": "AzureKeyVaultSecret",
 				"store": {
 					"referenceName": "ls_kevaownlab30",
@@ -20,7 +14,7 @@
 						"UrlKeyVault": "https://kevaownlab30.vault.azure.net/"
 					}
 				},
-				"secretName": "secrstacownlab30"
+				"secretName": "secrazuresqlconfiguracion"
 			}
 		}
 	}
