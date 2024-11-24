@@ -11,6 +11,10 @@
 			"type": "string",
 			"defaultValue": "@{linkedService().UrlKeyVault}"
 		},
+		"ls_azuresql_configuracion_properties_typeProperties_connectionString_secretName": {
+			"type": "string",
+			"defaultValue": "secrazuresqlconfiguracion"
+		},
 		"ls_source_devvertixddnsnet_BikeStores_properties_typeProperties_server": {
 			"type": "string",
 			"defaultValue": "devvertix.ddns.net,5722"
@@ -23,13 +27,9 @@
 			"type": "string",
 			"defaultValue": "integrator"
 		},
-		"ls_source_devvertixddnsnet_Configuracion_properties_typeProperties_connectionString_secretName": {
-			"type": "string",
-			"defaultValue": "secrdevvertixddnsnetstringconn"
-		},
 		"ls_stacownlab30_datalake_properties_typeProperties_url": {
 			"type": "string",
-			"defaultValue": "https://stacownlab30.dfs.core.windows.net"
+			"defaultValue": "@{linkedService().UrlDataLake}"
 		}
 	},
 	"variables": {
@@ -54,6 +54,32 @@
 				}
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_azuresql_configuracion')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"description": "Base de Datos para Configuracion de Azure SQL",
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "ls_kevaownlab30",
+							"type": "LinkedServiceReference",
+							"parameters": {
+								"UrlKeyVault": "https://kevaownlab30.vault.azure.net/"
+							}
+						},
+						"secretName": "[parameters('ls_azuresql_configuracion_properties_typeProperties_connectionString_secretName')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_kevaownlab30')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/ls_source_devvertixddnsnet_BikeStores')]",
@@ -84,33 +110,16 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/ls_source_devvertixddnsnet_Configuracion')]",
-			"type": "Microsoft.DataFactory/factories/linkedServices",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"description": "Servidor SQL Server devvertix.ddns.net, base de datos configuracion",
-				"annotations": [],
-				"type": "SqlServer",
-				"typeProperties": {
-					"connectionString": {
-						"type": "AzureKeyVaultSecret",
-						"store": {
-							"referenceName": "ls_kevaownlab30",
-							"type": "LinkedServiceReference"
-						},
-						"secretName": "[parameters('ls_source_devvertixddnsnet_Configuracion_properties_typeProperties_connectionString_secretName')]"
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_kevaownlab30')]"
-			]
-		},
-		{
 			"name": "[concat(parameters('factoryName'), '/ls_stacownlab30_datalake')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
 			"properties": {
+				"parameters": {
+					"UrlDataLake": {
+						"type": "string",
+						"defaultValue": "https://stacownlab30.dfs.core.windows.net"
+					}
+				},
 				"annotations": [],
 				"type": "AzureBlobFS",
 				"typeProperties": {
@@ -119,7 +128,10 @@
 						"type": "AzureKeyVaultSecret",
 						"store": {
 							"referenceName": "ls_kevaownlab30",
-							"type": "LinkedServiceReference"
+							"type": "LinkedServiceReference",
+							"parameters": {
+								"UrlKeyVault": "https://kevaownlab30.vault.azure.net/"
+							}
 						},
 						"secretName": "secrstacownlab30"
 					}
@@ -127,6 +139,44 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_kevaownlab30')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_azuresql_configuracion_parametros')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_azuresql_configuracion",
+					"type": "LinkedServiceReference"
+				},
+				"folder": {
+					"name": "Configuracion"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "Codigo",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "Clave",
+						"type": "varchar"
+					},
+					{
+						"name": "Valor",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "Parametros"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql_configuracion')]"
 			]
 		},
 		{
@@ -561,7 +611,10 @@
 			"properties": {
 				"linkedServiceName": {
 					"referenceName": "ls_stacownlab30_datalake",
-					"type": "LinkedServiceReference"
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"UrlDataLake": "https://stacownlab30.dfs.core.windows.net"
+					}
 				},
 				"parameters": {
 					"FechaProceso": {
@@ -903,58 +956,6 @@
 						},
 						"folderPath": {
 							"value": "@concat(dataset().MedallaBronce,'/devvertixddnsnet/bikestores/sales/staffs/año=', substring(dataset().FechaProceso, 0, 4), '/mes=', substring(dataset().FechaProceso, 5, 2), '/dia=', substring(dataset().FechaProceso, 8, 2), '/')",
-							"type": "Expression"
-						},
-						"fileSystem": {
-							"value": "@dataset().Contenedor",
-							"type": "Expression"
-						}
-					},
-					"compressionCodec": "snappy"
-				},
-				"schema": []
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/linkedServices/ls_stacownlab30_datalake')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/ds_datalake_sales_stores_parquet')]",
-			"type": "Microsoft.DataFactory/factories/datasets",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "ls_stacownlab30_datalake",
-					"type": "LinkedServiceReference"
-				},
-				"parameters": {
-					"FechaProceso": {
-						"type": "string",
-						"defaultValue": "1800-01-01"
-					},
-					"Contenedor": {
-						"type": "string",
-						"defaultValue": "reg"
-					},
-					"MedallaBronce": {
-						"type": "string",
-						"defaultValue": "bronze"
-					}
-				},
-				"folder": {
-					"name": "Datalake"
-				},
-				"annotations": [],
-				"type": "Parquet",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobFSLocation",
-						"fileName": {
-							"value": "@concat('stores_',replace(dataset().FechaProceso, '-', ''),'.parquet')",
-							"type": "Expression"
-						},
-						"folderPath": {
-							"value": "@concat(dataset().MedallaBronce,'/devvertixddnsnet/bikestores/sales/stores/año=', substring(dataset().FechaProceso, 0, 4), '/mes=', substring(dataset().FechaProceso, 5, 2), '/dia=', substring(dataset().FechaProceso, 8, 2), '/')",
 							"type": "Expression"
 						},
 						"fileSystem": {

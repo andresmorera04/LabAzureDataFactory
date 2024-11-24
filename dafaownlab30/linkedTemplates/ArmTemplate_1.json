@@ -13,38 +13,167 @@
 	},
 	"resources": [
 		{
-			"name": "[concat(parameters('factoryName'), '/ds_sql_configuracion_parametros')]",
+			"name": "[concat(parameters('factoryName'), '/ds_datalake_sales_stores_parquet')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"linkedServiceName": {
-					"referenceName": "ls_source_devvertixddnsnet_Configuracion",
+					"referenceName": "ls_stacownlab30_datalake",
 					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"FechaProceso": {
+						"type": "string",
+						"defaultValue": "1800-01-01"
+					},
+					"Contenedor": {
+						"type": "string",
+						"defaultValue": "reg"
+					},
+					"MedallaBronce": {
+						"type": "string",
+						"defaultValue": "bronze"
+					}
 				},
 				"folder": {
 					"name": "Datalake"
 				},
 				"annotations": [],
-				"type": "SqlServerTable",
-				"schema": [
-					{
-						"name": "Codigo",
-						"type": "int",
-						"precision": 10
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@concat('stores_',replace(dataset().FechaProceso, '-', ''),'.parquet')",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat(dataset().MedallaBronce,'/devvertixddnsnet/bikestores/sales/stores/año=', substring(dataset().FechaProceso, 0, 4), '/mes=', substring(dataset().FechaProceso, 5, 2), '/dia=', substring(dataset().FechaProceso, 8, 2), '/')",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().Contenedor",
+							"type": "Expression"
+						}
 					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_DiaSiguiente_Parametro_FechaProceso')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
 					{
-						"name": "Clave",
-						"type": "varchar"
-					},
-					{
-						"name": "Valor",
-						"type": "varchar"
+						"name": "CambiarDiaFechaProceso",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.00:10:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "DECLARE\r\n    @FechaProceso DATE\r\n    ,@DiasCargar INT\r\n\r\nSELECT @FechaProceso = Valor FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasCargar = Valor FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\n\r\nSELECT Codigo, Clave, (CONVERT(VARCHAR, DATEADD(DAY, @DiasCargar, @FechaProceso), 23)) AS Valor FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\n",
+								"queryTimeout": "00:25:00",
+								"isolationLevel": "ReadCommitted",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"writeBehavior": "upsert",
+								"upsertSettings": {
+									"useTempDB": true,
+									"keys": [
+										"Codigo"
+									]
+								},
+								"sqlWriterUseTableLock": false,
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"parallelCopies": 1,
+							"validateDataConsistency": false,
+							"dataIntegrationUnits": 4,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "Codigo",
+											"type": "Int32",
+											"physicalType": "int"
+										},
+										"sink": {
+											"name": "Codigo",
+											"type": "Int32",
+											"physicalType": "int"
+										}
+									},
+									{
+										"source": {
+											"name": "Clave",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "Clave",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									},
+									{
+										"source": {
+											"name": "Valor",
+											"type": "String",
+											"physicalType": "varchar"
+										},
+										"sink": {
+											"name": "Valor",
+											"type": "String",
+											"physicalType": "varchar"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_azuresql_configuracion_parametros",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_azuresql_configuracion_parametros",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
 					}
 				],
-				"typeProperties": {
-					"schema": "dbo",
-					"table": "Parametros"
-				}
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "Configuracion"
+				},
+				"annotations": []
 			},
 			"dependsOn": []
 		},
@@ -68,14 +197,14 @@
 						"userProperties": [],
 						"typeProperties": {
 							"source": {
-								"type": "SqlServerSource",
-								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;\r\n",
-								"queryTimeout": "00:20:00",
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
+								"queryTimeout": "00:25:00",
 								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
 							"dataset": {
-								"referenceName": "ds_sql_configuracion_parametros",
+								"referenceName": "ds_azuresql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
 							},
@@ -132,7 +261,27 @@
 										},
 										"enableStaging": false,
 										"parallelCopies": 1,
-										"validateDataConsistency": false,
+										"validateDataConsistency": true,
+										"logSettings": {
+											"enableCopyActivityLog": true,
+											"copyActivityLogSettings": {
+												"logLevel": "Warning",
+												"enableReliableLogging": false
+											},
+											"logLocationSettings": {
+												"linkedServiceName": {
+													"referenceName": "ls_stacownlab30_datalake",
+													"type": "LinkedServiceReference",
+													"parameters": {
+														"UrlDataLake": "https://stacownlab30.dfs.core.windows.net"
+													}
+												},
+												"path": {
+													"value": "@concat(item().Contenedor, '/', item().Medalla, '/logs_datafactory/')",
+													"type": "Expression"
+												}
+											}
+										},
 										"dataIntegrationUnits": 4,
 										"translator": {
 											"type": "TabularTranslator",
@@ -209,9 +358,7 @@
 				},
 				"annotations": []
 			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]"
-			]
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/pl_bikestore_production_categories')]",
@@ -233,14 +380,14 @@
 						"userProperties": [],
 						"typeProperties": {
 							"source": {
-								"type": "SqlServerSource",
+								"type": "AzureSqlSource",
 								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
-								"queryTimeout": "00:20:00",
+								"queryTimeout": "00:25:00",
 								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
 							"dataset": {
-								"referenceName": "ds_sql_configuracion_parametros",
+								"referenceName": "ds_azuresql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
 							},
@@ -371,9 +518,7 @@
 				},
 				"annotations": []
 			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]"
-			]
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/pl_bikestore_production_products_daily')]",
@@ -395,14 +540,14 @@
 						"userProperties": [],
 						"typeProperties": {
 							"source": {
-								"type": "SqlServerSource",
-								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;\r\n",
-								"queryTimeout": "00:20:00",
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
+								"queryTimeout": "00:25:00",
 								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
 							"dataset": {
-								"referenceName": "ds_sql_configuracion_parametros",
+								"referenceName": "ds_azuresql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
 							},
@@ -584,9 +729,7 @@
 				},
 				"annotations": []
 			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]"
-			]
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/pl_bikestore_sales_customers_daily')]",
@@ -608,14 +751,14 @@
 						"userProperties": [],
 						"typeProperties": {
 							"source": {
-								"type": "SqlServerSource",
+								"type": "AzureSqlSource",
 								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
-								"queryTimeout": "00:20:00",
+								"queryTimeout": "00:25:00",
 								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
 							"dataset": {
-								"referenceName": "ds_sql_configuracion_parametros",
+								"referenceName": "ds_azuresql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
 							},
@@ -831,9 +974,7 @@
 				},
 				"annotations": []
 			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]"
-			]
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/pl_bikestore_sales_order_items_daily')]",
@@ -855,14 +996,14 @@
 						"userProperties": [],
 						"typeProperties": {
 							"source": {
-								"type": "SqlServerSource",
+								"type": "AzureSqlSource",
 								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
-								"queryTimeout": "00:20:00",
+								"queryTimeout": "00:25:00",
 								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
 							"dataset": {
-								"referenceName": "ds_sql_configuracion_parametros",
+								"referenceName": "ds_azuresql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
 							},
@@ -1050,9 +1191,7 @@
 				},
 				"annotations": []
 			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]"
-			]
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/pl_bikestore_sales_orders_daily')]",
@@ -1074,13 +1213,14 @@
 						"userProperties": [],
 						"typeProperties": {
 							"source": {
-								"type": "SqlServerSource",
+								"type": "AzureSqlSource",
 								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
-								"queryTimeout": "00:20:00",
+								"queryTimeout": "00:25:00",
+								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
 							"dataset": {
-								"referenceName": "ds_sql_configuracion_parametros",
+								"referenceName": "ds_azuresql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
 							},
@@ -1288,9 +1428,7 @@
 				},
 				"annotations": []
 			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]"
-			]
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/pl_bikestore_sales_staffs')]",
@@ -1312,14 +1450,14 @@
 						"userProperties": [],
 						"typeProperties": {
 							"source": {
-								"type": "SqlServerSource",
+								"type": "AzureSqlSource",
 								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
-								"queryTimeout": "00:20:00",
+								"queryTimeout": "00:25:00",
 								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
 							"dataset": {
-								"referenceName": "ds_sql_configuracion_parametros",
+								"referenceName": "ds_azuresql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
 							},
@@ -1523,9 +1661,7 @@
 				},
 				"annotations": []
 			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]"
-			]
+			"dependsOn": []
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/pl_bikestore_sales_stores')]",
@@ -1547,14 +1683,14 @@
 						"userProperties": [],
 						"typeProperties": {
 							"source": {
-								"type": "SqlServerSource",
+								"type": "AzureSqlSource",
 								"sqlReaderQuery": "DECLARE\r\n\t@FechaInicio DATE\r\n\t,@FechaFin DATE\r\n\t,@DiasBorrarCargar INT\r\n\t,@Contenedor VARCHAR(5)\r\n\t,@MedallaBronce VARCHAR(25)\r\n\r\nSELECT @FechaFin = MAX(Valor) FROM dbo.Parametros WHERE Clave = 'FechaProceso';\r\nSELECT @DiasBorrarCargar = (MAX(Valor) * -1) FROM dbo.Parametros WHERE Clave = 'DiasCargarBorrar';\r\nSELECT TOP 1 @Contenedor = Valor FROM dbo.Parametros WHERE Clave = 'ContenedorLagoDatosReg' ORDER BY Codigo ASC;\r\nSELECT TOP 1 @MedallaBronce = Valor FROM dbo.Parametros WHERE Clave = 'MedallaBronce' ORDER BY Codigo ASC;\r\nSET @FechaInicio = DATEADD(DAY, @DiasBorrarCargar, @FechaFin)\r\n\r\nDECLARE @TablaTemporal TABLE (FechaProceso DATE, Contenedor VARCHAR(5), Medalla VARCHAR(25));\r\n\r\nWHILE @FechaInicio <= @FechaFin \r\nBEGIN \r\n\t\r\n\tINSERT INTO @TablaTemporal \r\n\tVALUES (@FechaInicio, @Contenedor, @MedallaBronce);\r\n\r\n\tSET @FechaInicio = DATEADD(DAY, 1, @FechaInicio);\r\n\r\nEND \r\n\r\nSELECT FechaProceso, Contenedor, Medalla FROM @TablaTemporal;",
-								"queryTimeout": "00:20:00",
+								"queryTimeout": "00:25:00",
 								"isolationLevel": "ReadCommitted",
 								"partitionOption": "None"
 							},
 							"dataset": {
-								"referenceName": "ds_sql_configuracion_parametros",
+								"referenceName": "ds_azuresql_configuracion_parametros",
 								"type": "DatasetReference",
 								"parameters": {}
 							},
@@ -1759,7 +1895,7 @@
 				"annotations": []
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_sql_configuracion_parametros')]"
+				"[concat(variables('factoryId'), '/datasets/ds_datalake_sales_stores_parquet')]"
 			]
 		},
 		{
