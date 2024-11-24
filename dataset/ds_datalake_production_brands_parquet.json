@@ -3,7 +3,10 @@
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "ls_stacownlab30_datalake",
-			"type": "LinkedServiceReference"
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"UrlDataLake": "https://stacownlab30.dfs.core.windows.net"
+			}
 		},
 		"parameters": {
 			"FechaProceso": {
