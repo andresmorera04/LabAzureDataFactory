@@ -62,10 +62,10 @@
 				"timeZone": "Central America Standard Time",
 				"schedule": {
 					"minutes": [
-						18
+						0
 					],
 					"hours": [
-						14
+						18
 					]
 				}
 			}
