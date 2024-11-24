@@ -2,7 +2,7 @@
 	"name": "tr_orchestrate_bronze",
 	"properties": {
 		"annotations": [],
-		"runtimeState": "Stopped",
+		"runtimeState": "Started",
 		"pipelines": [
 			{
 				"pipelineReference": {
