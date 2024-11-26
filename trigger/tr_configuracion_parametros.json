@@ -3,7 +3,7 @@
 	"properties": {
 		"description": "Trigger que se ejecuta diariamente para cambiar los valores de la tabla parametros",
 		"annotations": [],
-		"runtimeState": "Started",
+		"runtimeState": "Stopped",
 		"pipelines": [
 			{
 				"pipelineReference": {
